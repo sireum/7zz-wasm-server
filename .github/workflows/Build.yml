@@ -20,10 +20,14 @@ jobs:
           curl -LO "$WASI_SDK_URL"
           tar xzf wasi-sdk-*-x86_64-linux.tar.gz
           mv wasi-sdk-*-x86_64-linux ~/wasi-sdk
-      - name: Install binaryen
+      - name: Install Binaryen
         run: |
-          sudo apt-get update -q
-          sudo apt-get install -y -q binaryen
+          BINARYEN_URL=$(curl -s https://api.github.com/repos/WebAssembly/binaryen/releases/latest \
+            | grep -o '"browser_download_url": *"[^"]*x86_64-linux.tar.gz"' \
+            | head -1 | cut -d'"' -f4)
+          curl -LO "$BINARYEN_URL"
+          tar xzf binaryen-*-x86_64-linux.tar.gz
+          sudo cp binaryen-*/bin/* /usr/local/bin/
       - name: Build
         run: |
           bash build.sh
