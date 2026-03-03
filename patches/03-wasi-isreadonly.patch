@@ -1,0 +1,14 @@
+diff --git a/CPP/Windows/FileFind.h b/CPP/Windows/FileFind.h
+index 944bca2..d1b1906 100644
+--- a/CPP/Windows/FileFind.h
++++ b/CPP/Windows/FileFind.h
+@@ -137,6 +137,9 @@ public:
+ 
+   bool IsReadOnly() const
+   {
++    #ifdef __wasi__
++    return false;
++    #endif
+     // does linux support writing to ReadOnly files?
+     if ((mode & 0222) == 0) // S_IWUSR in p7zip
+       return true;

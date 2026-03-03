@@ -1,0 +1,2555 @@
+diff --git a/C/7zFile.c b/C/7zFile.c
+index ba5daa1..eca248a 100644
+--- a/C/7zFile.c
++++ b/C/7zFile.c
+@@ -59,7 +59,7 @@ static WRes File_Open(CSzFile *p, const char *name, int writeMode)
+       FILE_SHARE_READ, NULL,
+       writeMode ? CREATE_ALWAYS : OPEN_EXISTING,
+       FILE_ATTRIBUTE_NORMAL, NULL);
+-  return (p->handle != INVALID_HANDLE_VALUE) ? 0 : GetLastError();
++  return (p->handle != INVALID_HANDLE_VALUE) ? 0 : Get7zLastError();
+   
+   #elif defined(USE_FOPEN)
+   
+@@ -106,7 +106,7 @@ static WRes File_OpenW(CSzFile *p, const WCHAR *name, int writeMode)
+       FILE_SHARE_READ, NULL,
+       writeMode ? CREATE_ALWAYS : OPEN_EXISTING,
+       FILE_ATTRIBUTE_NORMAL, NULL);
+-  return (p->handle != INVALID_HANDLE_VALUE) ? 0 : GetLastError();
++  return (p->handle != INVALID_HANDLE_VALUE) ? 0 : Get7zLastError();
+ }
+ WRes InFile_OpenW(CSzFile *p, const WCHAR *name) { return File_OpenW(p, name, 0); }
+ WRes OutFile_OpenW(CSzFile *p, const WCHAR *name) { return File_OpenW(p, name, 1); }
+@@ -119,7 +119,7 @@ WRes File_Close(CSzFile *p)
+   if (p->handle != INVALID_HANDLE_VALUE)
+   {
+     if (!CloseHandle(p->handle))
+-      return GetLastError();
++      return Get7zLastError();
+     p->handle = INVALID_HANDLE_VALUE;
+   }
+   
+@@ -170,7 +170,7 @@ WRes File_Read(CSzFile *p, void *data, size_t *size)
+     originalSize -= processed;
+     *size += processed;
+     if (!res)
+-      return GetLastError();
++      return Get7zLastError();
+     // debug : we can break here for partial reading mode
+     if (processed == 0)
+       break;
+@@ -236,7 +236,7 @@ WRes File_Write(CSzFile *p, const void *data, size_t *size)
+     originalSize -= processed;
+     *size += processed;
+     if (!res)
+-      return GetLastError();
++      return Get7zLastError();
+     if (processed == 0)
+       break;
+   }
+@@ -298,7 +298,7 @@ WRes File_Seek(CSzFile *p, Int64 *pos, ESzSeek origin)
+   low = SetFilePointer(p->handle, (LONG)low, &high, moveMethod);
+   if (low == (UInt32)0xFFFFFFFF)
+   {
+-    WRes res = GetLastError();
++    WRes res = Get7zLastError();
+     if (res != NO_ERROR)
+       return res;
+   }
+@@ -349,7 +349,7 @@ WRes File_GetLength(CSzFile *p, UInt64 *length)
+   DWORD sizeLow = GetFileSize(p->handle, &sizeHigh);
+   if (sizeLow == 0xFFFFFFFF)
+   {
+-    DWORD res = GetLastError();
++    DWORD res = Get7zLastError();
+     if (res != NO_ERROR)
+       return res;
+   }
+diff --git a/C/7zip_gcc_c.mak b/C/7zip_gcc_c.mak
+index 006cfe0..0a9c9f6 100644
+--- a/C/7zip_gcc_c.mak
++++ b/C/7zip_gcc_c.mak
+@@ -14,7 +14,7 @@ PROGPATH = $(O)/$(PROG)
+ PROGPATH_STATIC = $(O)/$(PROG)s
+ 
+ ifneq ($(CC), xlc)
+-CFLAGS_WARN_WALL = -Wall -Werror -Wextra
++CFLAGS_WARN_WALL = -Wall  -Wextra
+ endif
+ 
+ # for object file
+diff --git a/C/Threads.c b/C/Threads.c
+index 177d1d9..a9f27ec 100644
+--- a/C/Threads.c
++++ b/C/Threads.c
+@@ -13,7 +13,7 @@
+ 
+ static WRes GetError(void)
+ {
+-  const DWORD res = GetLastError();
++  const DWORD res = Get7zLastError();
+   return res ? (WRes)res : 1;
+ }
+ 
+@@ -43,7 +43,7 @@ WRes Handle_WaitObject(HANDLE h)
+   */
+   if (dw == WAIT_FAILED)
+   {
+-    dw = GetLastError();
++    dw = Get7zLastError();
+     if (dw == 0)
+       return WAIT_FAILED;
+   }
+@@ -205,7 +205,7 @@ WRes Thread_Create(CThread *p, THREAD_FUNC_TYPE func, LPVOID param)
+ 
+   #endif
+ 
+-  /* maybe we must use errno here, but probably GetLastError() is also OK. */
++  /* maybe we must use errno here, but probably Get7zLastError() is also OK. */
+   return HandleToWRes(*p);
+ }
+ 
+@@ -251,7 +251,7 @@ WRes Thread_Create_With_Affinity(CThread *p, THREAD_FUNC_TYPE func, LPVOID param
+     }
+   }
+ 
+-  /* maybe we must use errno here, but probably GetLastError() is also OK. */
++  /* maybe we must use errno here, but probably Get7zLastError() is also OK. */
+   return wres;
+ 
+   #endif
+@@ -328,7 +328,7 @@ WRes Thread_Create_With_Group(CThread *p, THREAD_FUNC_TYPE func, LPVOID param, u
+     }
+   }
+ 
+-  /* maybe we must use errno here, but probably GetLastError() is also OK. */
++  /* maybe we must use errno here, but probably Get7zLastError() is also OK. */
+   return wres;
+ 
+   #endif
+diff --git a/C/Util/7z/7zMain.c b/C/Util/7z/7zMain.c
+index 6baf979..14f8e55 100644
+--- a/C/Util/7z/7zMain.c
++++ b/C/Util/7z/7zMain.c
+@@ -209,7 +209,7 @@ static WRes MyCreateDir(const UInt16 *name)
+ {
+   #ifdef USE_WINDOWS_FILE
+   
+-  return CreateDirectoryW((LPCWSTR)name, NULL) ? 0 : GetLastError();
++  return CreateDirectoryW((LPCWSTR)name, NULL) ? 0 : Get7zLastError();
+   
+   #else
+ 
+diff --git a/C/Util/7zipInstall/7zipInstall.c b/C/Util/7zipInstall/7zipInstall.c
+index 7d8e8c4..641a564 100644
+--- a/C/Util/7zipInstall/7zipInstall.c
++++ b/C/Util/7zipInstall/7zipInstall.c
+@@ -248,7 +248,7 @@ static DWORD GetFileVersion(LPCWSTR s)
+ 
+ static WRes MyCreateDir(LPCWSTR name)
+ {
+-  return CreateDirectoryW(name, NULL) ? 0 : GetLastError();
++  return CreateDirectoryW(name, NULL) ? 0 : Get7zLastError();
+ }
+ 
+ #define IS_SEPAR(c) (c == WCHAR_PATH_SEPARATOR)
+@@ -1588,7 +1588,7 @@ if (res == SZ_OK)
+           #ifndef UNDER_CE
+           if (!MoveFileExW(path, origPath, MOVEFILE_DELAY_UNTIL_REBOOT | MOVEFILE_REPLACE_EXISTING))
+           {
+-            winRes = GetLastError();
++            winRes = Get7zLastError();
+             break;
+           }
+           needRebootLevel |= fileLevel;
+@@ -1650,7 +1650,7 @@ if (res == SZ_OK)
+           // Get the shutdown privilege for this process.
+           AdjustTokenPrivileges(hToken, FALSE, &tkp, 0, (PTOKEN_PRIVILEGES)NULL, 0);
+           
+-          if (GetLastError() == ERROR_SUCCESS)
++          if (Get7zLastError() == ERROR_SUCCESS)
+           {
+             if (!ExitWindowsEx(EWX_REBOOT, 0))
+             {
+diff --git a/C/Util/7zipUninstall/7zipUninstall.c b/C/Util/7zipUninstall/7zipUninstall.c
+index e7051e2..ae45d1f 100644
+--- a/C/Util/7zipUninstall/7zipUninstall.c
++++ b/C/Util/7zipUninstall/7zipUninstall.c
+@@ -790,7 +790,7 @@ static int Install(void)
+         {
+           if (!RemoveFileAfterReboot())
+           {
+-            winRes = GetLastError();
++            winRes = Get7zLastError();
+           }
+           /*
+           else
+@@ -1099,7 +1099,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+           wcscpy(tempPath, path);
+           break;
+         }
+-        if (GetLastError() != ERROR_ALREADY_EXISTS)
++        if (Get7zLastError() != ERROR_ALREADY_EXISTS)
+           break;
+       }
+       
+diff --git a/C/Util/SfxSetup/SfxSetup.c b/C/Util/SfxSetup/SfxSetup.c
+index 9b5c1f9..e2363de 100644
+--- a/C/Util/SfxSetup/SfxSetup.c
++++ b/C/Util/SfxSetup/SfxSetup.c
+@@ -132,7 +132,7 @@ static void PrintErrorMessage(const char *message)
+ 
+ static WRes MyCreateDir(const WCHAR *name)
+ {
+-  return CreateDirectoryW(name, NULL) ? 0 : GetLastError();
++  return CreateDirectoryW(name, NULL) ? 0 : Get7zLastError();
+ }
+ 
+ #ifdef UNDER_CE
+@@ -200,7 +200,7 @@ static WRes RemoveDirWithSubItems(WCHAR *path)
+   handle = FindFirstFileW(path, &fd);
+   path[len] = L'\0';
+   if (handle == INVALID_HANDLE_VALUE)
+-    return GetLastError();
++    return Get7zLastError();
+   
+   for (;;)
+   {
+@@ -217,7 +217,7 @@ static WRes RemoveDirWithSubItems(WCHAR *path)
+       {
+         SetFileAttributesW(path, 0);
+         if (DeleteFileW(path) == 0)
+-          res = GetLastError();
++          res = Get7zLastError();
+       }
+     
+       if (res != 0)
+@@ -226,7 +226,7 @@ static WRes RemoveDirWithSubItems(WCHAR *path)
+   
+     if (!FindNextFileW(handle, &fd))
+     {
+-      res = GetLastError();
++      res = Get7zLastError();
+       if (res == ERROR_NO_MORE_FILES)
+         res = 0;
+       break;
+@@ -238,7 +238,7 @@ static WRes RemoveDirWithSubItems(WCHAR *path)
+   if (res == 0)
+   {
+     if (!RemoveDirectoryW(path))
+-      res = GetLastError();
++      res = Get7zLastError();
+   }
+   return res;
+ }
+@@ -355,7 +355,7 @@ int APIENTRY WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
+         pathLen = wcslen(path);
+         break;
+       }
+-      if (GetLastError() != ERROR_ALREADY_EXISTS)
++      if (Get7zLastError() != ERROR_ALREADY_EXISTS)
+       {
+         res = SZ_ERROR_FAIL;
+         break;
+diff --git a/CPP/7zip/7zip_gcc.mak b/CPP/7zip/7zip_gcc.mak
+index a78c0fa..7629a88 100644
+--- a/CPP/7zip/7zip_gcc.mak
++++ b/CPP/7zip/7zip_gcc.mak
+@@ -24,7 +24,7 @@ PROGPATH_STATIC = $(O)/$(PROG)s
+ 
+ 
+ ifneq ($(CC), xlc)
+-CFLAGS_WARN_WALL = -Werror -Wall -Wextra
++CFLAGS_WARN_WALL =  -Wall -Wextra
+ endif
+ 
+ # for object file
+diff --git a/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp b/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp
+index d4240d9..4be8dfc 100644
+--- a/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp
++++ b/CPP/7zip/Bundles/SFXSetup/SfxSetup.cpp
+@@ -109,7 +109,7 @@ static const char * const kEndID   = ",!@InstallEnd@!";
+ 
+ static void ShowErrorMessageSpec(const UString &name)
+ {
+-  UString message = NError::MyFormatMessage(::GetLastError());
++  UString message = NError::MyFormatMessage(::Get7zLastError());
+   const int pos = message.Find(L"%1");
+   if (pos >= 0)
+   {
+diff --git a/CPP/7zip/Common/FileStreams.cpp b/CPP/7zip/Common/FileStreams.cpp
+index b7e4fbe..761017d 100644
+--- a/CPP/7zip/Common/FileStreams.cpp
++++ b/CPP/7zip/Common/FileStreams.cpp
+@@ -45,9 +45,9 @@ you should undefine it after including <sys/types.h>
+ 
+ #include "FileStreams.h"
+ 
+-static inline HRESULT GetLastError_HRESULT()
++static inline HRESULT Get7zLastError_HRESULT()
+ {
+-  DWORD lastError = ::GetLastError();
++  DWORD lastError = ::Get7zLastError();
+   if (lastError == 0)
+     return E_FAIL;
+   return HRESULT_FROM_WIN32(lastError);
+@@ -57,7 +57,7 @@ static inline HRESULT ConvertBoolToHRESULT(bool result)
+ {
+   if (result)
+     return S_OK;
+-  return GetLastError_HRESULT();
++  return Get7zLastError_HRESULT();
+ }
+ 
+ 
+@@ -218,7 +218,7 @@ Z7_COM7F_IMF(CInFileStream::Read(void *data, UInt32 size, UInt32 *processedSize)
+   #endif // Z7_FILE_STREAMS_USE_WIN_FILE
+ 
+   {
+-    const DWORD error = ::GetLastError();
++    const DWORD error = ::Get7zLastError();
+ #if 0
+     if (File.IsStdStream && error == ERROR_BROKEN_PIPE)
+       return S_OK; // end of stream
+@@ -255,15 +255,15 @@ Z7_COM7F_IMF(CStdInFileStream::Read(void *data, UInt32 size, UInt32 *processedSi
+   /* in GUI mode : GetStdHandle(STD_INPUT_HANDLE) returns NULL,
+      and it doesn't set LastError.  */
+   /*
+-  SetLastError(0);
++  Set7zLastError(0);
+   const HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+   if (!h || h == INVALID_HANDLE_VALUE)
+   {
+     if (processedSize)
+       *processedSize = 0;
+-    if (GetLastError() == 0)
+-      SetLastError(ERROR_INVALID_HANDLE);
+-    return GetLastError_noZero_HRESULT();
++    if (Get7zLastError() == 0)
++      Set7zLastError(ERROR_INVALID_HANDLE);
++    return Get7zLastError_noZero_HRESULT();
+   }
+   */
+   BOOL res = ::ReadFile(GetStdHandle(STD_INPUT_HANDLE), data, sizeTemp, &realProcessedSize, NULL);
+@@ -271,12 +271,12 @@ Z7_COM7F_IMF(CStdInFileStream::Read(void *data, UInt32 size, UInt32 *processedSi
+   /*
+   printf("\nCInFileStream::Read: size=%d, processed=%8d res=%d 4rror=%3d\n",
+     (unsigned)size, (int)realProcessedSize,
+-    (int)res, GetLastError());
++    (int)res, Get7zLastError());
+   */
+ 
+   if (processedSize)
+     *processedSize = realProcessedSize;
+-  if (res == FALSE && GetLastError() == ERROR_BROKEN_PIPE)
++  if (res == FALSE && Get7zLastError() == ERROR_BROKEN_PIPE)
+     return S_OK;
+   return ConvertBoolToHRESULT(res != FALSE);
+   
+@@ -291,7 +291,7 @@ Z7_COM7F_IMF(CStdInFileStream::Read(void *data, UInt32 size, UInt32 *processedSi
+   }
+   while (res < 0 && (errno == EINTR));
+   if (res == -1)
+-    return GetLastError_HRESULT();
++    return Get7zLastError_HRESULT();
+   if (processedSize)
+     *processedSize = (UInt32)res;
+   return S_OK;
+@@ -403,7 +403,7 @@ Z7_COM7F_IMF(CInFileStream::Seek(Int64 offset, UInt32 seekOrigin, UInt64 *newPos
+   const off_t res = File.seek((off_t)offset, (int)seekOrigin);
+   if (res == -1)
+   {
+-    const HRESULT hres = GetLastError_HRESULT();
++    const HRESULT hres = Get7zLastError_HRESULT();
+     if (newPosition)
+       *newPosition = (UInt64)File.seekToCur();
+     return hres;
+@@ -432,7 +432,7 @@ Z7_COM7F_IMF(CInFileStream::GetProps(UInt64 *size, FILETIME *cTime, FILETIME *aT
+   /*
+   BY_HANDLE_FILE_INFORMATION info;
+   if (!File.GetFileInformation(&info))
+-    return GetLastError_HRESULT();
++    return Get7zLastError_HRESULT();
+   */
+   {
+     if (size) *size = (((UInt64)info.nFileSizeHigh) << 32) + info.nFileSizeLow;
+@@ -454,7 +454,7 @@ Z7_COM7F_IMF(CInFileStream::GetProps2(CStreamFileProps *props))
+   /*
+   BY_HANDLE_FILE_INFORMATION info;
+   if (!File.GetFileInformation(&info))
+-    return GetLastError_HRESULT();
++    return Get7zLastError_HRESULT();
+   */
+   {
+     props->Size = (((UInt64)info.nFileSizeHigh) << 32) + info.nFileSizeLow;
+@@ -556,7 +556,7 @@ Z7_COM7F_IMF(CInFileStream::ReloadProps())
+  #endif
+   _info_WasLoaded = File.GetFileInformation(&_info);
+   if (!_info_WasLoaded)
+-    return GetLastError_HRESULT();
++    return Get7zLastError_HRESULT();
+ #ifdef _WIN32
+ #if 0
+   printf(
+@@ -599,7 +599,7 @@ Z7_COM7F_IMF(CInFileStream::GetProps(UInt64 *size, FILETIME *cTime, FILETIME *aT
+   /*
+   struct stat st;
+   if (File.my_fstat(&st) != 0)
+-    return GetLastError_HRESULT();
++    return Get7zLastError_HRESULT();
+   */
+   
+   if (size) *size = (UInt64)st.st_size;
+@@ -624,7 +624,7 @@ Z7_COM7F_IMF(CInFileStream::GetProps2(CStreamFileProps *props))
+   /*
+   struct stat st;
+   if (File.my_fstat(&st) != 0)
+-    return GetLastError_HRESULT();
++    return Get7zLastError_HRESULT();
+   */
+ 
+   props->Size = (UInt64)st.st_size;
+@@ -782,7 +782,7 @@ Z7_COM7F_IMF(CInFileStream::ReloadProps())
+ {
+   _info_WasLoaded = (File.my_fstat(&_info) == 0);
+   if (!_info_WasLoaded)
+-    return GetLastError_HRESULT();
++    return Get7zLastError_HRESULT();
+   return S_OK;
+ }
+ 
+@@ -820,7 +820,7 @@ Z7_COM7F_IMF(COutFileStream::Write(const void *data, UInt32 size, UInt32 *proces
+   if (processedSize)
+     *processedSize = (UInt32)realProcessedSize;
+   if (res == -1)
+-    return GetLastError_HRESULT();
++    return Get7zLastError_HRESULT();
+   return S_OK;
+   
+   #endif
+@@ -843,7 +843,7 @@ Z7_COM7F_IMF(COutFileStream::Seek(Int64 offset, UInt32 seekOrigin, UInt64 *newPo
+   
+   const off_t res = File.seek((off_t)offset, (int)seekOrigin);
+   if (res == -1)
+-    return GetLastError_HRESULT();
++    return Get7zLastError_HRESULT();
+   if (newPosition)
+     *newPosition = (UInt64)res;
+   return S_OK;
+@@ -910,7 +910,7 @@ Z7_COM7F_IMF(CStdOutFileStream::Write(const void *data, UInt32 size, UInt32 *pro
+   while (res < 0 && (errno == EINTR));
+   
+   if (res == -1)
+-    return GetLastError_HRESULT();
++    return Get7zLastError_HRESULT();
+ 
+   _size += (size_t)res;
+   if (processedSize)
+diff --git a/CPP/7zip/Common/InOutTempBuffer.cpp b/CPP/7zip/Common/InOutTempBuffer.cpp
+index 3f7272e..b6eae44 100644
+--- a/CPP/7zip/Common/InOutTempBuffer.cpp
++++ b/CPP/7zip/Common/InOutTempBuffer.cpp
+@@ -131,13 +131,13 @@ HRESULT CInOutTempBuffer::Write_HRESULT(const void *data, UInt32 size)
+     }
+     _useMemOnly = true;
+     if (allocError)
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+    #endif
+   }
+ 
+  #ifdef USE_InOutTempBuffer_FILE
+   if (!_outFile.WriteFull(data, size))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   _crc = CrcUpdate(_crc, data, size);
+   _size += size;
+   return S_OK;
+@@ -182,7 +182,7 @@ HRESULT CInOutTempBuffer::WriteToStream(ISequentialOutStream *stream)
+     return E_FAIL;
+ 
+   if (!_outFile.Close())
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+ 
+   HRESULT hres;
+   void *buf = GetBuf(0); // index
+@@ -192,7 +192,7 @@ HRESULT CInOutTempBuffer::WriteToStream(ISequentialOutStream *stream)
+   {
+     NWindows::NFile::NIO::CInFile inFile;
+     if (!inFile.Open(_tempFile.GetPath()))
+-      hres = GetLastError_noZero_HRESULT();
++      hres = Get7zLastError_noZero_HRESULT();
+     else
+     {
+       UInt32 crc = CRC_INIT_VAL;
+@@ -201,7 +201,7 @@ HRESULT CInOutTempBuffer::WriteToStream(ISequentialOutStream *stream)
+         size_t processed;
+         if (!inFile.ReadFull(buf, kBufSize, processed))
+         {
+-          hres = GetLastError_noZero_HRESULT();
++          hres = Get7zLastError_noZero_HRESULT();
+           break;
+         }
+         if (processed == 0)
+diff --git a/CPP/7zip/Common/MultiOutStream.cpp b/CPP/7zip/Common/MultiOutStream.cpp
+index 1954311..5c5efac 100644
+--- a/CPP/7zip/Common/MultiOutStream.cpp
++++ b/CPP/7zip/Common/MultiOutStream.cpp
+@@ -216,7 +216,7 @@ HRESULT CMultiOutStream::CloseStream_and_DeleteFile(unsigned index)
+   // we can checki that file exist
+   // if (NFind::DoesFileExist_Raw(path))
+   if (!DeleteFileAlways(path))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   return S_OK;
+ }
+ 
+@@ -231,7 +231,7 @@ HRESULT CMultiOutStream::CloseStream_and_FinalRename(unsigned index)
+   {
+     if (s.StreamSpec->SetMTime(&MTime))
+       mtime_WasSet = true;
+-    // else res = GetLastError_noZero_HRESULT();
++    // else res = Get7zLastError_noZero_HRESULT();
+   }
+ 
+   RINOK(CloseStream(index))
+@@ -245,11 +245,11 @@ HRESULT CMultiOutStream::CloseStream_and_FinalRename(unsigned index)
+   {
+     if (!SetDirTime(tempPath, NULL, NULL, &MTime))
+     {
+-      // res = GetLastError_noZero_HRESULT();
++      // res = Get7zLastError_noZero_HRESULT();
+     }
+   }
+   if (!MyMoveFile(tempPath, path))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   /* we clear CVolStream::Postfix. So we will not use Temp path
+      anymore for this stream, and we will work only with final path */
+   s.Postfix.Empty();
+@@ -296,7 +296,7 @@ HRESULT CMultiOutStream::CreateNewStream(UInt64 newSize)
+   if (NFind::DoesFileExist_Raw(path))
+     return HRESULT_FROM_WIN32(ERROR_ALREADY_EXISTS);
+   if (!CreateTempFile2(path, false, s.Postfix, &s.StreamSpec->File))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   
+   s.Start = GetGlobalOffset_for_NewStream();
+   s.Pos = 0;
+@@ -396,7 +396,7 @@ HRESULT CMultiOutStream::ReOpenStream(unsigned streamIndex)
+     }
+   }
+   else
+-    hres = GetLastError_noZero_HRESULT();
++    hres = Get7zLastError_noZero_HRESULT();
+   s.Stream.Release();
+   s.StreamSpec = NULL;
+   return hres;
+diff --git a/CPP/7zip/Common/OutMemStream.cpp b/CPP/7zip/Common/OutMemStream.cpp
+index 29a2394..9e399c0 100644
+--- a/CPP/7zip/Common/OutMemStream.cpp
++++ b/CPP/7zip/Common/OutMemStream.cpp
+@@ -103,7 +103,7 @@ Z7_COM7F_IMF(COutMemStream::Write(const void *data, UInt32 size, UInt32 *process
+       {
+         if (waitResult == WAIT_FAILED)
+         {
+-          const DWORD res = ::GetLastError();
++          const DWORD res = ::Get7zLastError();
+           if (res != 0)
+             return HRESULT_FROM_WIN32(res);
+         }
+diff --git a/CPP/7zip/UI/Agent/Agent.cpp b/CPP/7zip/UI/Agent/Agent.cpp
+index 46b740a..398b318 100644
+--- a/CPP/7zip/UI/Agent/Agent.cpp
++++ b/CPP/7zip/UI/Agent/Agent.cpp
+@@ -1617,7 +1617,7 @@ Z7_COM7F_IMF(CAgent::Open(
+   if (!inStream)
+   {
+     if (!fi.Find(us2fs(_archiveFilePath)))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     if (fi.IsDir())
+       return E_FAIL;
+     _attrib = fi.Attrib;
+diff --git a/CPP/7zip/UI/Client7z/Client7z.cpp b/CPP/7zip/UI/Client7z/Client7z.cpp
+index b1e43da..19a982a 100644
+--- a/CPP/7zip/UI/Client7z/Client7z.cpp
++++ b/CPP/7zip/UI/Client7z/Client7z.cpp
+@@ -740,7 +740,7 @@ Z7_COM7F_IMF(CArchiveUpdateCallback::GetStream(UInt32 index, ISequentialInStream
+     FString path = DirPrefix + dirItem.FullPath;
+     if (!inStreamSpec->Open(path))
+     {
+-      const DWORD sysError = ::GetLastError();
++      const DWORD sysError = ::Get7zLastError();
+       FailedCodes.Add(HRESULT_FROM_WIN32(sysError));
+       FailedFiles.Add(path);
+       // if (systemError == ERROR_SHARING_VIOLATION)
+@@ -787,7 +787,7 @@ Z7_COM7F_IMF(CArchiveUpdateCallback::GetVolumeStream(UInt32 index, ISequentialOu
+   COutFileStream *streamSpec = new COutFileStream;
+   CMyComPtr<ISequentialOutStream> streamLoc(streamSpec);
+   if (!streamSpec->Create_NEW(us2fs(fileName)))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   *volumeStream = streamLoc.Detach();
+   return S_OK;
+ }
+diff --git a/CPP/7zip/UI/Common/ArchiveCommandLine.cpp b/CPP/7zip/UI/Common/ArchiveCommandLine.cpp
+index 73974e6..1fa4315 100644
+--- a/CPP/7zip/UI/Common/ArchiveCommandLine.cpp
++++ b/CPP/7zip/UI/Common/ArchiveCommandLine.cpp
+@@ -1182,7 +1182,7 @@ void CArcCmdLineParser::Parse1(const UStringVector &commandStrings,
+           PrintHex(Parse1Log, v);
+           if (!SetProcessAffinityMask(GetCurrentProcess(), (DWORD_PTR)v))
+           {
+-            const DWORD lastError = GetLastError();
++            const DWORD lastError = Get7zLastError();
+             Parse1Log += " : ERROR : ";
+             Parse1Log += NError::MyFormatMessage(lastError);
+           }
+@@ -1211,7 +1211,7 @@ void CArcCmdLineParser::Parse1(const UStringVector &commandStrings,
+         if (!isError)
+         if (!aff.SetProcAffinity())
+         {
+-          const DWORD lastError = GetLastError();
++          const DWORD lastError = Get7zLastError();
+           Parse1Log += " : ERROR : ";
+           Parse1Log += NError::MyFormatMessage(lastError);
+         }
+diff --git a/CPP/7zip/UI/Common/ArchiveExtractCallback.cpp b/CPP/7zip/UI/Common/ArchiveExtractCallback.cpp
+index 6631629..4178065 100644
+--- a/CPP/7zip/UI/Common/ArchiveExtractCallback.cpp
++++ b/CPP/7zip/UI/Common/ArchiveExtractCallback.cpp
+@@ -109,7 +109,7 @@ bool InitLocalPrivileges()
+     return false;
+   if (!token.AdjustPrivileges(&tp))
+     return false;
+-  return (GetLastError() == ERROR_SUCCESS);
++  return (Get7zLastError() == ERROR_SUCCESS);
+ }
+ #endif // Z7_USE_SECURITY_CODE
+ 
+@@ -517,7 +517,7 @@ void CArchiveExtractCallback::CreateComplexDirectory(
+ 
+     HRESULT hres = S_OK;
+     if (!CreateDir(fullPath))
+-      hres = GetLastError_noZero_HRESULT();
++      hres = Get7zLastError_noZero_HRESULT();
+     if (isFinalDir)
+     {
+       if (!NFile::NFind::DoesDirExist(fullPath))
+@@ -576,7 +576,7 @@ HRESULT CArchiveExtractCallback::SendMessageError_with_Error(HRESULT errorCode,
+ 
+ HRESULT CArchiveExtractCallback::SendMessageError_with_LastError(const char *message, const FString &path) const
+ {
+-  const HRESULT errorCode = GetLastError_noZero_HRESULT();
++  const HRESULT errorCode = Get7zLastError_noZero_HRESULT();
+   return SendMessageError_with_Error(errorCode, message, path);
+ }
+ 
+@@ -596,7 +596,7 @@ HRESULT CArchiveExtractCallback::SendMessageError2(HRESULT errorCode, const char
+ HRESULT CArchiveExtractCallback::SendMessageError2_with_LastError(
+     const char *message, const FString &path1, const FString &path2) const
+ {
+-  const HRESULT errorCode = GetLastError_noZero_HRESULT();
++  const HRESULT errorCode = Get7zLastError_noZero_HRESULT();
+   return SendMessageError2(errorCode, message, path1, path2);
+ }
+ 
+@@ -1272,7 +1272,7 @@ HRESULT CArchiveExtractCallback::CheckExistFile(FString &fullProcessedPath, bool
+       {
+         if (NFind::DoesFileExist_Raw(fullProcessedPath))
+           if (!DeleteFileAlways(fullProcessedPath))
+-            if (GetLastError() != ERROR_FILE_NOT_FOUND) // check it in linux
++            if (Get7zLastError() != ERROR_FILE_NOT_FOUND) // check it in linux
+             {
+               RINOK(SendMessageError_with_LastError(kCantDeleteOutputFile, fullProcessedPath))
+               return S_OK;
+@@ -1465,7 +1465,7 @@ HRESULT CArchiveExtractCallback::GetExtractStream(CMyComPtr<ISequentialOutStream
+   
+   if (!_outFileStreamSpec->Create_ALWAYS_or_Open_ALWAYS(fullProcessedPath, !_isSplit))
+   {
+-    // if (::GetLastError() != ERROR_FILE_EXISTS || !isSplit)
++    // if (::Get7zLastError() != ERROR_FILE_EXISTS || !isSplit)
+     {
+       RINOK(SendMessageError_with_LastError(kCantOpenOutFile, fullProcessedPath))
+       return S_OK;
+@@ -2121,7 +2121,7 @@ HRESULT CArchiveExtractCallback::DeleteLinkFileAlways_or_RemoveEmptyDir(
+       if (DeleteFileAlways(path))
+         return S_OK;
+     }
+-    if (GetLastError() != ERROR_FILE_NOT_FOUND)
++    if (Get7zLastError() != ERROR_FILE_NOT_FOUND)
+       return SendMessageError_with_LastError(
+           fi.IsDir() ?
+             k_CantDelete_Dir_for_SymLink:
+@@ -3042,7 +3042,7 @@ HRESULT CArchiveExtractCallback::SetDirsTimes()
+     if (!link.Create())
+     {
+       if (res == S_OK)
+-        res = GetLastError_noZero_HRESULT();
++        res = Get7zLastError_noZero_HRESULT();
+       // res = E_FAIL;
+       // do we need error message here in Windows and in posix?
+       SendMessageError_with_LastError("Cannot create Symbolic Link", link._source);
+diff --git a/CPP/7zip/UI/Common/ArchiveOpenCallback.cpp b/CPP/7zip/UI/Common/ArchiveOpenCallback.cpp
+index 8a72936..527ff38 100644
+--- a/CPP/7zip/UI/Common/ArchiveOpenCallback.cpp
++++ b/CPP/7zip/UI/Common/ArchiveOpenCallback.cpp
+@@ -40,7 +40,7 @@ HRESULT COpenCallbackImp::Init2(const FString &folderPrefix, const FString &file
+   if (!_fileInfo.Find_FollowLink(_folderPrefix + fileName))
+   {
+     // throw 20121118;
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   }
+   return S_OK;
+ }
+@@ -229,7 +229,7 @@ HRESULT CMultiStreams::EnsureOpen(unsigned index)
+       CInFileStream *inFile = new CInFileStream;
+       CMyComPtr<IInStream> inStreamTemp = inFile;
+       if (!inFile->Open(s.Path))
+-        return GetLastError_noZero_HRESULT();
++        return Get7zLastError_noZero_HRESULT();
+       s.FileSpec = inFile;
+       s.Stream = s.FileSpec;
+       InsertToList(index);
+@@ -338,7 +338,7 @@ Z7_COM7F_IMF(COpenCallbackImp::GetStream(const wchar_t *name, IInStream **inStre
+     CInFileStream *inFile = new CInFileStream;
+     CMyComPtr<IInStream> inStreamTemp = inFile;
+     if (!inFile->Open(fullPath))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     RINOK(Volumes.PrepareToOpenNew())
+     s.FileSpec = inFile;
+     s.Stream = s.FileSpec;
+diff --git a/CPP/7zip/UI/Common/Bench.cpp b/CPP/7zip/UI/Common/Bench.cpp
+index 316c980..0426729 100644
+--- a/CPP/7zip/UI/Common/Bench.cpp
++++ b/CPP/7zip/UI/Common/Bench.cpp
+@@ -3854,12 +3854,12 @@ HRESULT Bench(
+ 
+       NFile::NIO::CInFile file;
+       if (!file.Open(us2fs(property.Value)))
+-        return GetLastError_noZero_HRESULT();
++        return Get7zLastError_noZero_HRESULT();
+       size_t len;
+       {
+         UInt64 len64;
+         if (!file.GetLength(len64))
+-          return GetLastError_noZero_HRESULT();
++          return Get7zLastError_noZero_HRESULT();
+         if (printCallback)
+         {
+           printCallback->Print("file size =");
+@@ -3879,7 +3879,7 @@ HRESULT Bench(
+       {
+         size_t processed;
+         if (!file.ReadFull((Byte *)fileDataBuffer, len, processed))
+-          return GetLastError_noZero_HRESULT();
++          return Get7zLastError_noZero_HRESULT();
+         if (processed != len)
+           return E_FAIL;
+       }
+diff --git a/CPP/7zip/UI/Common/EnumDirItems.cpp b/CPP/7zip/UI/Common/EnumDirItems.cpp
+index cada2e6..98b5416 100644
+--- a/CPP/7zip/UI/Common/EnumDirItems.cpp
++++ b/CPP/7zip/UI/Common/EnumDirItems.cpp
+@@ -105,7 +105,7 @@ HRESULT CDirItems::AddError(const FString &path, DWORD errorCode)
+ 
+ HRESULT CDirItems::AddError(const FString &path)
+ {
+-  return AddError(path, ::GetLastError());
++  return AddError(path, ::Get7zLastError());
+ }
+ 
+ static const unsigned kScanProgressStepMask = (1 << 12) - 1;
+@@ -224,7 +224,7 @@ HRESULT CDirItems::AddSecurityItem(const FString &path, int &secureIndex)
+   }
+   else
+   {
+-    errorCode = GetLastError();
++    errorCode = Get7zLastError();
+     if (errorCode == ERROR_INSUFFICIENT_BUFFER)
+     {
+       if (secureSize <= TempSecureBuf.Size())
+@@ -239,7 +239,7 @@ HRESULT CDirItems::AddSecurityItem(const FString &path, int &secureIndex)
+             errorCode = ERROR_INVALID_FUNCTION;
+         }
+         else
+-          errorCode = GetLastError();
++          errorCode = Get7zLastError();
+       }
+     }
+   }
+@@ -589,7 +589,7 @@ HRESULT CDirItems::SetLinkInfo(CDirItem &dirItem, const NFind::CFileInfo &fi,
+     return S_OK;
+   }
+ 
+-  DWORD res = ::GetLastError();
++  DWORD res = ::Get7zLastError();
+   buf.Free();
+   return AddError(path, res);
+ }
+diff --git a/CPP/7zip/UI/Common/Extract.cpp b/CPP/7zip/UI/Common/Extract.cpp
+index 0301976..9831aec 100644
+--- a/CPP/7zip/UI/Common/Extract.cpp
++++ b/CPP/7zip/UI/Common/Extract.cpp
+@@ -184,7 +184,7 @@ static HRESULT DecompressArchive(
+   */
+   else if (!CreateComplexDir(outDir))
+   {
+-    const HRESULT res = GetLastError_noZero_HRESULT();
++    const HRESULT res = Get7zLastError_noZero_HRESULT();
+     SetErrorMessage("Cannot create output directory", outDir, res, errorMessage);
+     return res;
+   }
+@@ -301,7 +301,7 @@ HRESULT Extract(
+       const FString arcPath = us2fs(arcPaths[i]);
+       if (!fi.Find_FollowLink(arcPath))
+       {
+-        const HRESULT errorCode = GetLastError_noZero_HRESULT();
++        const HRESULT errorCode = Get7zLastError_noZero_HRESULT();
+         SetErrorMessage("Cannot find archive file", arcPath, errorCode, errorMessage);
+         return errorCode;
+       }
+@@ -358,13 +358,13 @@ HRESULT Extract(
+       // fi.ClearBase();
+       // fi.Size = 0; // (UInt64)(Int64)-1;
+       if (!fi.SetAs_StdInFile())
+-        return GetLastError_noZero_HRESULT();
++        return Get7zLastError_noZero_HRESULT();
+     }
+     else
+     {
+       if (!fi.Find_FollowLink(us2fs(arcPath)) || fi.IsDir())
+       {
+-        const HRESULT errorCode = GetLastError_noZero_HRESULT();
++        const HRESULT errorCode = Get7zLastError_noZero_HRESULT();
+         SetErrorMessage("Cannot find archive file", us2fs(arcPath), errorCode, errorMessage);
+         return errorCode;
+       }
+@@ -466,7 +466,7 @@ HRESULT Extract(
+         {
+           if (!NFile::NDir::GetOnlyDirPrefix(us2fs(arcPath), dirPrefix))
+           {
+-            // return GetLastError_noZero_HRESULT();
++            // return Get7zLastError_noZero_HRESULT();
+           }
+         }
+         if (!dirPrefix.IsEmpty())
+diff --git a/CPP/7zip/UI/Common/HashCalc.cpp b/CPP/7zip/UI/Common/HashCalc.cpp
+index f026f80..3cca21a 100644
+--- a/CPP/7zip/UI/Common/HashCalc.cpp
++++ b/CPP/7zip/UI/Common/HashCalc.cpp
+@@ -477,7 +477,7 @@ HRESULT HashCalc(
+   {
+     CDirItem di;
+     if (!di.SetAs_StdInFile())
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     dirItems.Items.Add(di);
+   }
+   else
+@@ -551,7 +551,7 @@ HRESULT HashCalc(
+ #else
+       if (!CreateStdInStream(inStream))
+       {
+-        const DWORD lastError = ::GetLastError();
++        const DWORD lastError = ::Get7zLastError();
+         const HRESULT res = callback->OpenFileError(FString("stdin"), lastError);
+         hb.NumErrors++;
+         if (res != S_FALSE && res != S_OK)
+@@ -588,7 +588,7 @@ HRESULT HashCalc(
+           const FString phyPath = dirItems.GetPhyPath(i);
+           if (!inStreamSpec->OpenShared(phyPath, options.OpenShareForWrite))
+           {
+-            const HRESULT res = callback->OpenFileError(phyPath, ::GetLastError());
++            const HRESULT res = callback->OpenFileError(phyPath, ::Get7zLastError());
+             hb.NumErrors++;
+             if (res != S_FALSE)
+               return res;
+@@ -662,9 +662,9 @@ HRESULT HashCalc(
+   {
+     NFile::NIO::COutFile file;
+     if (!file.Create(us2fs(options.HashFilePath), true)) // createAlways
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     if (!file.WriteFull(hashFileString, hashFileString.Len()))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+   }
+   */
+ 
+diff --git a/CPP/7zip/UI/Common/LoadCodecs.cpp b/CPP/7zip/UI/Common/LoadCodecs.cpp
+index 943435a..f42f365 100644
+--- a/CPP/7zip/UI/Common/LoadCodecs.cpp
++++ b/CPP/7zip/UI/Common/LoadCodecs.cpp
+@@ -511,7 +511,7 @@ extern "C"
+ 
+ void CCodecs::AddLastError(const FString &path)
+ {
+-  const HRESULT res = GetLastError_noZero_HRESULT();
++  const HRESULT res = Get7zLastError_noZero_HRESULT();
+   CCodecError &error = Errors.AddNew();
+   error.Path = path;
+   error.ErrorCode = res;
+@@ -579,8 +579,8 @@ HRESULT CCodecs::LoadDll(const FString &dllPath, bool needCheckDll, bool *loaded
+       //  %1 is not a valid Win32 application.
+       //  #define ERROR_BAD_EXE_FORMAT             193L
+       */
+-      // return GetLastError_noZero_HRESULT();
+-      const DWORD lastError = GetLastError();
++      // return Get7zLastError_noZero_HRESULT();
++      const DWORD lastError = Get7zLastError();
+       if (lastError != ERROR_BAD_EXE_FORMAT)
+       {
+         CCodecError &error = Errors.AddNew();
+@@ -728,7 +728,7 @@ HRESULT CCodecs::LoadDllsFromFolder(const FString &folderPath)
+       // it can be wrong Symbolic link to folder here
+       AddLastError(folderPath);
+       break;
+-      // return GetLastError_noZero_HRESULT();
++      // return Get7zLastError_noZero_HRESULT();
+     }
+     if (!found)
+       break;
+diff --git a/CPP/7zip/UI/Common/OpenArchive.cpp b/CPP/7zip/UI/Common/OpenArchive.cpp
+index c26d4c0..1a579a3 100644
+--- a/CPP/7zip/UI/Common/OpenArchive.cpp
++++ b/CPP/7zip/UI/Common/OpenArchive.cpp
+@@ -3090,7 +3090,7 @@ HRESULT CArc::OpenStreamOrFile(COpenOptions &op)
+     seqStream = new CStdInFileStream;
+ #else
+     if (!CreateStdInStream(seqStream))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+ #endif
+     op.seqStream = seqStream;
+   }
+@@ -3100,7 +3100,7 @@ HRESULT CArc::OpenStreamOrFile(COpenOptions &op)
+     fileStream = fileStreamSpec;
+     Path = filePath;
+     if (!fileStreamSpec->Open(us2fs(Path)))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     op.stream = fileStream;
+     #ifdef Z7_SFX
+     IgnoreSplit = true;
+@@ -3524,7 +3524,7 @@ HRESULT CArchiveLink::ReOpen(COpenOptions &op)
+   CInFileStream *fileStreamSpec = new CInFileStream;
+   CMyComPtr<IInStream> stream(fileStreamSpec);
+   if (!fileStreamSpec->Open(us2fs(op.filePath)))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   op.stream = stream;
+ 
+   CArc &arc = Arcs[0];
+diff --git a/CPP/7zip/UI/Common/Update.cpp b/CPP/7zip/UI/Common/Update.cpp
+index 1c2754e..9bf899c 100644
+--- a/CPP/7zip/UI/Common/Update.cpp
++++ b/CPP/7zip/UI/Common/Update.cpp
+@@ -51,7 +51,7 @@ static CFSTR const kTempFolderPrefix = FTEXT("7zE");
+ 
+ void CUpdateErrorInfo::SetFromLastError(const char *message)
+ {
+-  SystemError = ::GetLastError();
++  SystemError = ::Get7zLastError();
+   Message = message;
+ }
+ 
+@@ -710,7 +710,7 @@ static HRESULT Compress(
+           isOK = true;
+           break;
+         }
+-        if (::GetLastError() != ERROR_FILE_EXISTS)
++        if (::Get7zLastError() != ERROR_FILE_EXISTS)
+           break;
+         if (!archivePath.Temp)
+           break;
+@@ -1358,7 +1358,7 @@ HRESULT UpdateArchive(
+     // di.ClearBase();
+     // di.Size = (UInt64)(Int64)-1;
+     if (!di.SetAs_StdInFile())
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     di.Name = options.StdInFileName;
+     // di.Attrib_IsDefined = false;
+     // NTime::GetCurUtc_FiTime(di.MTime);
+@@ -1652,7 +1652,7 @@ HRESULT UpdateArchive(
+ 
+       if (!MyMoveFile_with_Progress(tempPath, us2fs(arcPath), &prox))
+       {
+-        errorInfo.SystemError = ::GetLastError();
++        errorInfo.SystemError = ::Get7zLastError();
+         errorInfo.Message = "cannot move the file";
+         if (errorInfo.SystemError == ERROR_INVALID_PARAMETER)
+         {
+diff --git a/CPP/7zip/UI/Common/UpdateCallback.cpp b/CPP/7zip/UI/Common/UpdateCallback.cpp
+index e2f1866..185def5 100644
+--- a/CPP/7zip/UI/Common/UpdateCallback.cpp
++++ b/CPP/7zip/UI/Common/UpdateCallback.cpp
+@@ -637,7 +637,7 @@ Z7_COM7F_IMF(CArchiveUpdateCallback::GetStream2(UInt32 index, ISequentialInStrea
+ #else
+     CMyComPtr<ISequentialInStream> inStreamLoc;
+     if (!CreateStdInStream(inStreamLoc))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+ #endif
+     *inStream = inStreamLoc.Detach();
+   }
+@@ -651,7 +651,7 @@ Z7_COM7F_IMF(CArchiveUpdateCallback::GetStream2(UInt32 index, ISequentialInStrea
+       // we still need DeviceIoControlOut() instead of Read
+       if (!inStreamSpec->File.OpenReparse(path))
+       {
+-        return Callback->OpenFileError(path, ::GetLastError());
++        return Callback->OpenFileError(path, ::Get7zLastError());
+       }
+       */
+       // 20.03: we use Reparse Data instead of real data
+@@ -721,7 +721,7 @@ Z7_COM7F_IMF(CArchiveUpdateCallback::GetStream2(UInt32 index, ISequentialInStrea
+       }
+       if (!isOpen)
+       {
+-        const DWORD error = ::GetLastError();
++        const DWORD error = ::Get7zLastError();
+         const HRESULT hres = Callback->OpenFileError(path, error);
+         if (hres == S_OK || hres == S_FALSE)
+         if (StopAfterOpenError ||
+@@ -994,7 +994,7 @@ Z7_COM7F_IMF(CArchiveUpdateCallback::GetVolumeStream(UInt32 index, ISequentialOu
+   COutFileStream *streamSpec = new COutFileStream;
+   CMyComPtr<ISequentialOutStream> streamLoc(streamSpec);
+   if (!streamSpec->Create_NEW(fileName))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   *volumeStream = streamLoc.Detach();
+   return S_OK;
+   COM_TRY_END
+diff --git a/CPP/7zip/UI/Common/WorkDir.cpp b/CPP/7zip/UI/Common/WorkDir.cpp
+index a492967..79715a2 100644
+--- a/CPP/7zip/UI/Common/WorkDir.cpp
++++ b/CPP/7zip/UI/Common/WorkDir.cpp
+@@ -69,7 +69,7 @@ HRESULT CWorkDirTempFile::CreateTempFile(const FString &originalPath)
+   _outStreamSpec = new COutFileStream;
+   OutStream = _outStreamSpec;
+   if (!_tempFile.Create(path, &_outStreamSpec->File))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   _originalPath = originalPath;
+   return S_OK;
+ }
+@@ -79,6 +79,6 @@ HRESULT CWorkDirTempFile::MoveToOriginal(bool deleteOriginal,
+ {
+   OutStream.Release();
+   if (!_tempFile.MoveTo(_originalPath, deleteOriginal, progress))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   return S_OK;
+ }
+diff --git a/CPP/7zip/UI/Console/List.cpp b/CPP/7zip/UI/Console/List.cpp
+index 2d9f5a3..add6dd0 100644
+--- a/CPP/7zip/UI/Console/List.cpp
++++ b/CPP/7zip/UI/Console/List.cpp
+@@ -1122,7 +1122,7 @@ HRESULT ListArchives(
+       NFile::NFind::CFileInfo fi;
+       if (!fi.Find_FollowLink(us2fs(arcPath)))
+       {
+-        DWORD errorCode = GetLastError();
++        DWORD errorCode = Get7zLastError();
+         if (errorCode == 0)
+           errorCode = ERROR_FILE_NOT_FOUND;
+         lastError = HRESULT_FROM_WIN32(errorCode);
+diff --git a/CPP/7zip/UI/Explorer/ContextMenu.cpp b/CPP/7zip/UI/Explorer/ContextMenu.cpp
+index 0630d78..07770ad 100644
+--- a/CPP/7zip/UI/Explorer/ContextMenu.cpp
++++ b/CPP/7zip/UI/Explorer/ContextMenu.cpp
+@@ -564,7 +564,7 @@ void CZipContextMenu::AddMapItem_ForSubMenu(const char *verb)
+ 
+ static HRESULT RETURN_WIN32_LastError_AS_HRESULT()
+ {
+-  DWORD lastError = ::GetLastError();
++  DWORD lastError = ::Get7zLastError();
+   if (lastError == 0)
+     return E_FAIL;
+   return HRESULT_FROM_WIN32(lastError);
+diff --git a/CPP/7zip/UI/Explorer/MyMessages.cpp b/CPP/7zip/UI/Explorer/MyMessages.cpp
+index c079e31..75b05a4 100644
+--- a/CPP/7zip/UI/Explorer/MyMessages.cpp
++++ b/CPP/7zip/UI/Explorer/MyMessages.cpp
+@@ -39,5 +39,5 @@ static void ShowErrorMessageDWORD(HWND window, DWORD errorCode)
+ 
+ void ShowLastErrorMessage(HWND window)
+ {
+-  ShowErrorMessageDWORD(window, ::GetLastError());
++  ShowErrorMessageDWORD(window, ::Get7zLastError());
+ }
+diff --git a/CPP/7zip/UI/Far/FarUtils.cpp b/CPP/7zip/UI/Far/FarUtils.cpp
+index 3c33d8e..46471db 100644
+--- a/CPP/7zip/UI/Far/FarUtils.cpp
++++ b/CPP/7zip/UI/Far/FarUtils.cpp
+@@ -480,7 +480,7 @@ int ShowSysErrorMessage(DWORD errorCode)
+ 
+ int ShowLastErrorMessage()
+ {
+-  return ShowSysErrorMessage(::GetLastError());
++  return ShowSysErrorMessage(::Get7zLastError());
+ }
+ 
+ int ShowSysErrorMessage(DWORD errorCode, const wchar_t *name)
+diff --git a/CPP/7zip/UI/FileManager/AltStreamsFolder.cpp b/CPP/7zip/UI/FileManager/AltStreamsFolder.cpp
+index 685ac70..dc85493 100644
+--- a/CPP/7zip/UI/FileManager/AltStreamsFolder.cpp
++++ b/CPP/7zip/UI/FileManager/AltStreamsFolder.cpp
+@@ -108,7 +108,7 @@ HRESULT CAltStreamsFolder::Init(const FString &path /* , IFolderFolder *parentFo
+   {
+     CFileInfo fi;
+     if (!fi.Find(_pathBaseFile))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+   }
+ 
+   unsigned prefixSize = GetFsParentPrefixSize(_pathBaseFile);
+@@ -132,7 +132,7 @@ HRESULT CAltStreamsFolder::Init(const FString &path /* , IFolderFolder *parentFo
+   /*
+   if (_findChangeNotification.IsHandleAllocated())
+     return S_OK;
+-  return GetLastError();
++  return Get7zLastError();
+   */
+   return S_OK;
+ }
+@@ -151,7 +151,7 @@ Z7_COM7F_IMF(CAltStreamsFolder::LoadItems())
+     bool found;
+     if (!enumerator.Next(si, found))
+     {
+-      // if (GetLastError() == ERROR_ACCESS_DENIED)
++      // if (Get7zLastError() == ERROR_ACCESS_DENIED)
+       //   break;
+       // return E_FAIL;
+       break;
+@@ -463,13 +463,13 @@ Z7_COM7F_IMF(CAltStreamsFolder::CreateFile(const wchar_t *name, IProgress * /* p
+   GetAbsPath(name, absPath);
+   NIO::COutFile outFile;
+   if (!outFile.Create_NEW(absPath))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   return S_OK;
+ }
+ 
+-static UString GetLastErrorMessage()
++static UString Get7zLastErrorMessage()
+ {
+-  return NError::MyFormatMessage(GetLastError_noZero_HRESULT());
++  return NError::MyFormatMessage(Get7zLastError_noZero_HRESULT());
+ }
+ 
+ static HRESULT UpdateFile(NFsFolder::CCopyStateIO &state, CFSTR inPath, CFSTR outPath, IFolderArchiveUpdateCallback *callback)
+@@ -493,7 +493,7 @@ static HRESULT UpdateFile(NFsFolder::CCopyStateIO &state, CFSTR inPath, CFSTR ou
+     if (state.ErrorFileIndex >= 0)
+     {
+       if (state.ErrorMessage.IsEmpty())
+-        state.ErrorMessage = GetLastErrorMessage();
++        state.ErrorMessage = Get7zLastErrorMessage();
+       FString errorName;
+       if (state.ErrorFileIndex == 0)
+         errorName = inPath;
+@@ -650,7 +650,7 @@ Z7_COM7F_IMF(CAltStreamsFolder::Delete(const UInt32 *indices, UInt32 numItems,IP
+     const FString fullPath = _pathPrefix + us2fs(ss.Name);
+     const bool result = DeleteFileAlways(fullPath);
+     if (!result)
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     const UInt64 completed = i;
+     RINOK(progress->SetCompleted(&completed))
+   }
+@@ -740,7 +740,7 @@ static HRESULT CopyStream(
+     if (state.ErrorFileIndex >= 0)
+     {
+       if (state.ErrorMessage.IsEmpty())
+-        state.ErrorMessage = GetLastErrorMessage();
++        state.ErrorMessage = Get7zLastErrorMessage();
+       FString errorName;
+       if (state.ErrorFileIndex == 0)
+         errorName = srcPath;
+@@ -834,7 +834,7 @@ Z7_COM7F_IMF(CAltStreamsFolder::CopyTo(Int32 moveMode, const UInt32 *indices, UI
+ 
+   CFileInfo fi;
+   if (!fi.Find(_pathBaseFile))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+ 
+   NFsFolder::CCopyStateIO state;
+   state.Progress = callback;
+@@ -890,7 +890,7 @@ Z7_COM7F_IMF(CAltStreamsFolder::CopyFrom(Int32 /* moveMode */, const wchar_t * /
+ 
+     CFileInfo fi;
+     if (!fi.Find(path))
+-      return ::GetLastError();
++      return ::Get7zLastError();
+     if (fi.IsDir())
+       return E_NOTIMPL;
+     totalSize += fi.Size;
+@@ -915,7 +915,7 @@ Z7_COM7F_IMF(CAltStreamsFolder::CopyFrom(Int32 /* moveMode */, const wchar_t * /
+       {
+         if (callback)
+         {
+-          RINOK(SendMessageError(callback, GetLastErrorMessage(), _pathBaseFile));
++          RINOK(SendMessageError(callback, Get7zLastErrorMessage(), _pathBaseFile));
+           return S_OK;
+         }
+         return Return_LastError_or_FAIL();
+diff --git a/CPP/7zip/UI/FileManager/App.cpp b/CPP/7zip/UI/FileManager/App.cpp
+index 5b7d616..7dc3b61 100644
+--- a/CPP/7zip/UI/FileManager/App.cpp
++++ b/CPP/7zip/UI/FileManager/App.cpp
+@@ -696,7 +696,7 @@ void CApp::OnCopy(bool move, bool copyToSame, unsigned srcPanelIndex)
+         basePath.DeleteBack();
+         if (!DoesFileOrDirExist(basePath))
+         {
+-          srcPanel.MessageBoxError2Lines(basePath, ERROR_FILE_NOT_FOUND); // GetLastError()
++          srcPanel.MessageBoxError2Lines(basePath, ERROR_FILE_NOT_FOUND); // Get7zLastError()
+           return;
+         }
+         destIsFsPath = true;
+@@ -727,7 +727,7 @@ void CApp::OnCopy(bool move, bool copyToSame, unsigned srcPanelIndex)
+             UString prefix = destPath.Left(pos + 1);
+             if (!CreateComplexDir(us2fs(prefix)))
+             {
+-              const HRESULT lastError = GetLastError_noZero_HRESULT();
++              const HRESULT lastError = Get7zLastError_noZero_HRESULT();
+               srcPanel.MessageBox_Error_2Lines_Message_HRESULT(prefix, lastError);
+               return;
+             }
+@@ -739,7 +739,7 @@ void CApp::OnCopy(bool move, bool copyToSame, unsigned srcPanelIndex)
+           NName::NormalizeDirPathPrefix(destPath);
+           if (!CreateComplexDir(us2fs(destPath)))
+           {
+-            const HRESULT lastError = GetLastError_noZero_HRESULT();
++            const HRESULT lastError = Get7zLastError_noZero_HRESULT();
+             srcPanel.MessageBox_Error_2Lines_Message_HRESULT(destPath, lastError);
+             return;
+           }
+diff --git a/CPP/7zip/UI/FileManager/BrowseDialog.cpp b/CPP/7zip/UI/FileManager/BrowseDialog.cpp
+index b12d8e8..3f0d0d2 100644
+--- a/CPP/7zip/UI/FileManager/BrowseDialog.cpp
++++ b/CPP/7zip/UI/FileManager/BrowseDialog.cpp
+@@ -579,7 +579,7 @@ HRESULT CBrowseDialog::Reload(const UString &pathPrefix, const UString &selected
+     isDrive = true;
+     FStringVector drives;
+     if (!MyGetLogicalDriveStrings(drives))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     FOR_VECTOR (i, drives)
+     {
+       const FString &d = drives[i];
+@@ -615,7 +615,7 @@ HRESULT CBrowseDialog::Reload(const UString &pathPrefix, const UString &selected
+     {
+       bool found;
+       if (!enumerator.Next(fi, found))
+-        return GetLastError_noZero_HRESULT();
++        return Get7zLastError_noZero_HRESULT();
+       if (!found)
+         break;
+       if (!fi.IsDir())
+@@ -805,7 +805,7 @@ void CBrowseDialog::OnCreateDir()
+   {
+     if (!NDir::CreateComplexDir(destPath))
+     {
+-      MessageBox_HResError((HWND)*this, GetLastError_noZero_HRESULT(), fs2us(destPath));
++      MessageBox_HResError((HWND)*this, Get7zLastError_noZero_HRESULT(), fs2us(destPath));
+     }
+     else
+     {
+@@ -946,7 +946,7 @@ bool CBrowseInfo::BrowseForFile(const CObjectVector<CBrowseFilterInfo> &filters)
+   #ifdef UNDER_CE
+     return false;
+   #else
+-    // maybe we must use GetLastError in WinCE.
++    // maybe we must use Get7zLastError in WinCE.
+     const DWORD errorCode = CommDlgExtendedError();
+   #ifdef USE_MY_BROWSE_DIALOG
+     // FNERR_INVALIDFILENAME is expected error, if long path was used
+diff --git a/CPP/7zip/UI/FileManager/BrowseDialog2.cpp b/CPP/7zip/UI/FileManager/BrowseDialog2.cpp
+index 9f083c5..51ff107 100644
+--- a/CPP/7zip/UI/FileManager/BrowseDialog2.cpp
++++ b/CPP/7zip/UI/FileManager/BrowseDialog2.cpp
+@@ -77,7 +77,7 @@ static void MessageBox_HResError(HWND wnd, HRESULT errorCode, const wchar_t *nam
+ 
+ static void MessageBox_LastError_path(HWND wnd, const FString &path)
+ {
+-  const HRESULT hres = GetLastError_noZero_HRESULT();
++  const HRESULT hres = Get7zLastError_noZero_HRESULT();
+   MessageBox_HResError(wnd, hres, fs2us(path));
+ }
+ 
+@@ -1092,7 +1092,7 @@ Z7_DIAGNOSTIC_IGNORE_CAST_FUNCTION
+     {
+       case SE_ERR_NOASSOC:
+         MessageBox_HResError(window,
+-          GetLastError_noZero_HRESULT(),
++          Get7zLastError_noZero_HRESULT(),
+           NULL
+           // L"There is no application associated with the given file name extension",
+           );
+@@ -1497,7 +1497,7 @@ HRESULT CBrowseDialog2::Reload(const UString &pathPrefix, const UStringVector &s
+     isDrive = true;
+     FStringVector drives;
+     if (!MyGetLogicalDriveStrings(drives))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     FOR_VECTOR (i, drives)
+     {
+       const FString &d = drives[i];
+@@ -1530,7 +1530,7 @@ HRESULT CBrowseDialog2::Reload(const UString &pathPrefix, const UStringVector &s
+         {
+           bool found;
+           if (!enumerator.Next(fi, found))
+-            return GetLastError_noZero_HRESULT();
++            return Get7zLastError_noZero_HRESULT();
+           if (!found)
+             break;
+         }
+diff --git a/CPP/7zip/UI/FileManager/ExtractCallback.cpp b/CPP/7zip/UI/FileManager/ExtractCallback.cpp
+index da25969..2a93448 100644
+--- a/CPP/7zip/UI/FileManager/ExtractCallback.cpp
++++ b/CPP/7zip/UI/FileManager/ExtractCallback.cpp
+@@ -794,7 +794,7 @@ Z7_COM7F_IMF(CExtractCallbackImp::AskWrite(
+     {
+       if (NFind::DoesFileExist_Raw(destPathSys))
+       if (!NDir::DeleteFileAlways(destPathSys))
+-      if (GetLastError() != ERROR_FILE_NOT_FOUND)
++      if (Get7zLastError() != ERROR_FILE_NOT_FOUND)
+       {
+         RINOK(MessageError("Cannot delete output file", destPathSys))
+         return E_ABORT;
+@@ -1214,7 +1214,7 @@ HRESULT CVirtFileSystem::FlushToDisk(bool closeLast)
+       if (!_needWriteToRealFile)
+       {
+         if (!file.ColonWasUsed)
+-          return GetLastError_noZero_HRESULT(); // it's main file and we can't ignore such error.
++          return Get7zLastError_noZero_HRESULT(); // it's main file and we can't ignore such error.
+         // (file.ColonWasUsed == true)
+         // So it's additional alt stream.
+         // And we ignore file creation error for additional alt stream.
+diff --git a/CPP/7zip/UI/FileManager/FSDrives.cpp b/CPP/7zip/UI/FileManager/FSDrives.cpp
+index 70354c7..97d20aa 100644
+--- a/CPP/7zip/UI/FileManager/FSDrives.cpp
++++ b/CPP/7zip/UI/FileManager/FSDrives.cpp
+@@ -51,22 +51,22 @@ static HRESULT CopyFileSpec(CFSTR fromPath, CFSTR toPath,
+ {
+   NIO::CInFile inFile;
+   if (!inFile.Open(fromPath))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   if (fileSize == (UInt64)(Int64)-1)
+   {
+     if (!inFile.GetLength(fileSize))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+   }
+   
+   NIO::COutFile outFile;
+   if (writeToDisk)
+   {
+     if (!outFile.Open(toPath, FILE_SHARE_WRITE, OPEN_EXISTING, 0))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+   }
+   else
+     if (!outFile.Create_ALWAYS(toPath))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+   
+   CPhysTempBuffer tempBuffer;
+   tempBuffer.buffer = MidAlloc(bufferSize);
+@@ -83,7 +83,7 @@ static HRESULT CopyFileSpec(CFSTR fromPath, CFSTR toPath,
+     UInt32 curSize = (UInt32)MyMin(rem, (UInt64)bufferSize);
+     UInt32 processedSize;
+     if (!inFile.Read(tempBuffer.buffer, curSize, processedSize))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     if (processedSize == 0)
+       break;
+     curSize = processedSize;
+@@ -95,7 +95,7 @@ static HRESULT CopyFileSpec(CFSTR fromPath, CFSTR toPath,
+         return E_FAIL;
+     }
+     if (!outFile.Write(tempBuffer.buffer, curSize, processedSize))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     if (curSize != processedSize)
+       return E_FAIL;
+     pos += curSize;
+@@ -370,7 +370,7 @@ HRESULT CFSDrives::GetFileSize(unsigned index, UInt64& fileSize) const
+ #ifdef Z7_DEVICE_FILE
+   NIO::CInFile inFile;
+   if (!inFile.Open(_drives[index].GetDeviceFileIoName()))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   if (inFile.SizeDefined)
+   {
+     fileSize = inFile.Size;
+diff --git a/CPP/7zip/UI/FileManager/FSFolder.cpp b/CPP/7zip/UI/FileManager/FSFolder.cpp
+index 51dfaa9..914b54a 100644
+--- a/CPP/7zip/UI/FileManager/FSFolder.cpp
++++ b/CPP/7zip/UI/FileManager/FSFolder.cpp
+@@ -116,7 +116,7 @@ HRESULT CFSFolder::Init(const FString &path /* , IFolderFolder *parentFolder */)
+ 
+   if (!_findChangeNotification.IsHandleAllocated())
+   {
+-    const HRESULT lastError = GetLastError_noZero_HRESULT();
++    const HRESULT lastError = Get7zLastError_noZero_HRESULT();
+     CFindFile findFile;
+     CFileInfo fi;
+     FString path2 = _path;
+@@ -170,7 +170,7 @@ bool MyGetCompressedFileSizeW(CFSTR path, UInt64 &size)
+   IF_USE_MAIN_PATH
+   {
+     lowPart = ::GetCompressedFileSizeW(fs2us(path), &highPart);
+-    if (lowPart != INVALID_FILE_SIZE || ::GetLastError() == NO_ERROR)
++    if (lowPart != INVALID_FILE_SIZE || ::Get7zLastError() == NO_ERROR)
+     {
+       size = ((UInt64)highPart << 32) | lowPart;
+       return true;
+@@ -183,7 +183,7 @@ bool MyGetCompressedFileSizeW(CFSTR path, UInt64 &size)
+     if (GetSuperPath(path, superPath, USE_MAIN_PATH))
+     {
+       lowPart = ::GetCompressedFileSizeW(superPath, &highPart);
+-      if (lowPart != INVALID_FILE_SIZE || ::GetLastError() == NO_ERROR)
++      if (lowPart != INVALID_FILE_SIZE || ::Get7zLastError() == NO_ERROR)
+       {
+         size = ((UInt64)highPart << 32) | lowPart;
+         return true;
+@@ -268,7 +268,7 @@ HRESULT CFSFolder::LoadSubItems(int dirItem, const FString &relPrefix)
+           bool found;
+           if (!enumerator.Next(si, found))
+           {
+-            // if (GetLastError() == ERROR_ACCESS_DENIED)
++            // if (Get7zLastError() == ERROR_ACCESS_DENIED)
+             //   break;
+             // return E_FAIL;
+             break;
+@@ -1064,10 +1064,10 @@ Z7_COM7F_IMF(CFSFolder::CreateFolder(const wchar_t *name, IProgress * /* progres
+   GetAbsPath(name, absPath);
+   if (CreateDir(absPath))
+     return S_OK;
+-  if (::GetLastError() != ERROR_ALREADY_EXISTS)
++  if (::Get7zLastError() != ERROR_ALREADY_EXISTS)
+     if (CreateComplexDir(absPath))
+       return S_OK;
+-  return GetLastError_noZero_HRESULT();
++  return Get7zLastError_noZero_HRESULT();
+ }
+ 
+ Z7_COM7F_IMF(CFSFolder::CreateFile(const wchar_t *name, IProgress * /* progress */))
+@@ -1076,7 +1076,7 @@ Z7_COM7F_IMF(CFSFolder::CreateFile(const wchar_t *name, IProgress * /* progress
+   GetAbsPath(name, absPath);
+   NIO::COutFile outFile;
+   if (!outFile.Create_NEW(absPath))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   return S_OK;
+ }
+ 
+@@ -1091,7 +1091,7 @@ Z7_COM7F_IMF(CFSFolder::Rename(UInt32 index, const wchar_t *newName, IProgress *
+   if (fi.Parent >= 0)
+     fullPrefix += Folders[fi.Parent];
+   if (!MyMoveFile(fullPrefix + fi.Name, fullPrefix + us2fs(newName)))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   return S_OK;
+ }
+ 
+@@ -1126,7 +1126,7 @@ Z7_COM7F_IMF(CFSFolder::Delete(const UInt32 *indices, UInt32 numItems,IProgress
+         result = DeleteFileAlways(fullPath);
+     }
+     if (!result)
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     const UInt64 completed = i;
+     RINOK(progress->SetCompleted(&completed))
+   }
+diff --git a/CPP/7zip/UI/FileManager/FSFolderCopy.cpp b/CPP/7zip/UI/FileManager/FSFolderCopy.cpp
+index 3582be0..a495b10 100644
+--- a/CPP/7zip/UI/FileManager/FSFolderCopy.cpp
++++ b/CPP/7zip/UI/FileManager/FSFolderCopy.cpp
+@@ -337,7 +337,7 @@ bool CCopyState::CopyFile_Sys(CFSTR oldFile, CFSTR newFile)
+           (fs2fas(oldFile), fs2fas(newFile),
+           CopyProgressRoutine, &ProgressInfo, &cancelFlag, COPY_FILE_FAIL_IF_EXISTS))
+         return true;
+-      if (::GetLastError() != ERROR_CALL_NOT_IMPLEMENTED)
++      if (::Get7zLastError() != ERROR_CALL_NOT_IMPLEMENTED)
+         return false;
+     }
+     return BOOLToBool(::CopyFile(fs2fas(oldFile), fs2fas(newFile), TRUE));
+@@ -388,7 +388,7 @@ bool CCopyState::MoveFile_Sys(CFSTR oldFile, CFSTR newFile)
+           return true;
+       }
+       #ifdef Z7_LONG_PATH
+-      if ((!(USE_MAIN_PATH_2) || ::GetLastError() != ERROR_CALL_NOT_IMPLEMENTED) && USE_SUPER_PATH_2)
++      if ((!(USE_MAIN_PATH_2) || ::Get7zLastError() != ERROR_CALL_NOT_IMPLEMENTED) && USE_SUPER_PATH_2)
+       {
+         if (IsCallbackProgressError())
+           return false;
+@@ -406,7 +406,7 @@ bool CCopyState::MoveFile_Sys(CFSTR oldFile, CFSTR newFile)
+           return true;
+       }
+       #endif
+-      if (::GetLastError() != ERROR_CALL_NOT_IMPLEMENTED)
++      if (::Get7zLastError() != ERROR_CALL_NOT_IMPLEMENTED)
+         return false;
+     }
+   // }
+@@ -432,20 +432,20 @@ static HRESULT SendMessageError(IFolderOperationsExtractCallback *callback,
+ 
+ static DWORD Return_LastError_or_FAIL()
+ {
+-  DWORD errorCode = GetLastError();
++  DWORD errorCode = Get7zLastError();
+   if (errorCode == 0)
+     errorCode = (DWORD)E_FAIL;
+   return errorCode;
+ }
+ 
+-static UString GetLastErrorMessage()
++static UString Get7zLastErrorMessage()
+ {
+   return NError::MyFormatMessage(Return_LastError_or_FAIL());
+ }
+ 
+ HRESULT SendLastErrorMessage(IFolderOperationsExtractCallback *callback, const FString &fileName)
+ {
+-  return SendMessageError(callback, GetLastErrorMessage(), fileName);
++  return SendMessageError(callback, Get7zLastErrorMessage(), fileName);
+ }
+ 
+ static HRESULT CopyFile_Ask(
+@@ -493,7 +493,7 @@ static HRESULT CopyFile_Ask(
+       if (state2.ErrorFileIndex >= 0)
+       {
+         if (state2.ErrorMessage.IsEmpty())
+-          state2.ErrorMessage = GetLastErrorMessage();
++          state2.ErrorMessage = Get7zLastErrorMessage();
+         FString errorName;
+         if (state2.ErrorFileIndex == 0)
+           errorName = srcPath;
+@@ -515,7 +515,7 @@ static HRESULT CopyFile_Ask(
+       RINOK(state.ProgressInfo.ProgressResult)
+       if (!res)
+       {
+-        const DWORD errorCode = GetLastError();
++        const DWORD errorCode = Get7zLastError();
+         UString errorMessage = NError::MyFormatMessage(Return_LastError_or_FAIL());
+         if (errorCode == ERROR_INVALID_PARAMETER)
+         {
+@@ -529,7 +529,7 @@ static HRESULT CopyFile_Ask(
+           }
+         }
+ 
+-        // GetLastError() is ERROR_REQUEST_ABORTED in case of PROGRESS_CANCEL.
++        // Get7zLastError() is ERROR_REQUEST_ABORTED in case of PROGRESS_CANCEL.
+         RINOK(SendMessageError(state.Callback, errorMessage, destPathNew))
+         return E_ABORT;
+       }
+diff --git a/CPP/7zip/UI/FileManager/LinkDialog.cpp b/CPP/7zip/UI/FileManager/LinkDialog.cpp
+index a92ee4d..9748d3f 100644
+--- a/CPP/7zip/UI/FileManager/LinkDialog.cpp
++++ b/CPP/7zip/UI/FileManager/LinkDialog.cpp
+@@ -47,7 +47,7 @@ static bool GetSymLink(CFSTR path, CReparseAttr &attr, UString &errorMessage)
+     return false;
+   if (!attr.Parse(buf, buf.Size()))
+   {
+-    SetLastError(attr.ErrorCode);
++    Set7zLastError(attr.ErrorCode);
+     return false;
+   }
+   CByteBuffer data2;
+@@ -109,7 +109,7 @@ bool CLinkDialog::OnInit()
+         const bool res = GetSymLink(us2fs(FilePath), attr, error);
+         if (!res && error.IsEmpty())
+         {
+-          const DWORD lastError = GetLastError();
++          const DWORD lastError = Get7zLastError();
+           if (lastError)
+             error = NError::MyFormatMessage(lastError);
+         }
+@@ -254,7 +254,7 @@ void CLinkDialog::ShowError(const wchar_t *s)
+ 
+ void CLinkDialog::ShowLastErrorMessage()
+ {
+-  ShowError(NError::MyFormatMessage(GetLastError()));
++  ShowError(NError::MyFormatMessage(Get7zLastError()));
+ }
+ 
+ void CLinkDialog::OnButton_Link()
+diff --git a/CPP/7zip/UI/FileManager/Panel.cpp b/CPP/7zip/UI/FileManager/Panel.cpp
+index 84bd88c..a643a29 100644
+--- a/CPP/7zip/UI/FileManager/Panel.cpp
++++ b/CPP/7zip/UI/FileManager/Panel.cpp
+@@ -787,7 +787,7 @@ void CPanel::MessageBox_Error_2Lines_Message_HRESULT(LPCWSTR message, HRESULT er
+ }
+ 
+ void CPanel::MessageBox_LastError(LPCWSTR caption) const
+-  { MessageBox_Error_HRESULT_Caption(GetLastError_noZero_HRESULT(), caption); }
++  { MessageBox_Error_HRESULT_Caption(Get7zLastError_noZero_HRESULT(), caption); }
+ 
+ void CPanel::MessageBox_LastError() const
+   { MessageBox_LastError(L"7-Zip"); }
+diff --git a/CPP/7zip/UI/FileManager/PanelCrc.cpp b/CPP/7zip/UI/FileManager/PanelCrc.cpp
+index df0b733..d30aaae 100644
+--- a/CPP/7zip/UI/FileManager/PanelCrc.cpp
++++ b/CPP/7zip/UI/FileManager/PanelCrc.cpp
+@@ -53,7 +53,7 @@ void CDirEnumerator::Init()
+ 
+ static DWORD GetNormalizedError()
+ {
+-  const DWORD error = GetLastError();
++  const DWORD error = Get7zLastError();
+   return (error == 0) ? (DWORD)E_FAIL : error;
+ }
+ 
+diff --git a/CPP/7zip/UI/FileManager/PanelItemOpen.cpp b/CPP/7zip/UI/FileManager/PanelItemOpen.cpp
+index 9d78368..eb2fa8a 100644
+--- a/CPP/7zip/UI/FileManager/PanelItemOpen.cpp
++++ b/CPP/7zip/UI/FileManager/PanelItemOpen.cpp
+@@ -468,7 +468,7 @@ HRESULT CPanel::OpenAsArc(IInStream *inStream,
+   else
+   {
+     if (!folderLink.FileInfo.Find(folderLink.FilePath))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     if (folderLink.FileInfo.IsDir())
+       return S_FALSE;
+     folderLink.IsVirtual = false;
+diff --git a/CPP/7zip/UI/FileManager/PanelSplitFile.cpp b/CPP/7zip/UI/FileManager/PanelSplitFile.cpp
+index c452d41..8084945 100644
+--- a/CPP/7zip/UI/FileManager/PanelSplitFile.cpp
++++ b/CPP/7zip/UI/FileManager/PanelSplitFile.cpp
+@@ -142,7 +142,7 @@ HRESULT CThreadSplit::ProcessVirt()
+ {
+   NIO::CInFile inFile;
+   if (!inFile.Open(FilePath))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+ 
+   CPreAllocOutFile outFile;
+   
+@@ -155,7 +155,7 @@ HRESULT CThreadSplit::ProcessVirt()
+   
+   UInt64 length;
+   if (!inFile.GetLength(length))
+-    return GetLastError_noZero_HRESULT();
++    return Get7zLastError_noZero_HRESULT();
+   
+   CProgressSync &sync = Sync;
+   sync.Set_NumBytesTotal(length);
+@@ -181,7 +181,7 @@ HRESULT CThreadSplit::ProcessVirt()
+     }
+     UInt32 processedSize;
+     if (!inFile.Read(buffer, needSize, processedSize))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     if (processedSize == 0)
+       return S_OK;
+     needSize = processedSize;
+@@ -194,7 +194,7 @@ HRESULT CThreadSplit::ProcessVirt()
+       sync.Set_FilePath(fs2us(name));
+       if (!outFile.File.Create_NEW(name))
+       {
+-        const HRESULT res = GetLastError_noZero_HRESULT();
++        const HRESULT res = Get7zLastError_noZero_HRESULT();
+         AddErrorPath(name);
+         return res;
+       }
+@@ -209,7 +209,7 @@ HRESULT CThreadSplit::ProcessVirt()
+     }
+     
+     if (!outFile.Write(buffer, needSize, processedSize))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     if (needSize != processedSize)
+       throw g_Message_FileWriteError;
+     
+@@ -297,7 +297,7 @@ void CApp::Split()
+   NName::NormalizeDirPathPrefix(path);
+   if (!CreateComplexDir(us2fs(path)))
+   {
+-    const HRESULT lastError = GetLastError_noZero_HRESULT();
++    const HRESULT lastError = Get7zLastError_noZero_HRESULT();
+     srcPanel.MessageBox_Error_2Lines_Message_HRESULT(MyFormatNew(IDS_CANNOT_CREATE_FOLDER, path), lastError);
+     return;
+   }
+@@ -357,7 +357,7 @@ HRESULT CThreadCombine::ProcessVirt()
+   NIO::COutFile outFile;
+   if (!outFile.Create_NEW(OutputPath))
+   {
+-    const HRESULT res = GetLastError_noZero_HRESULT();
++    const HRESULT res = Get7zLastError_noZero_HRESULT();
+     AddErrorPath(OutputPath);
+     return res;
+   }
+@@ -376,7 +376,7 @@ HRESULT CThreadCombine::ProcessVirt()
+     const FString nextName = InputDirPrefix + Names[i];
+     if (!inFile.Open(nextName))
+     {
+-      const HRESULT res = GetLastError_noZero_HRESULT();
++      const HRESULT res = Get7zLastError_noZero_HRESULT();
+       AddErrorPath(nextName);
+       return res;
+     }
+@@ -386,7 +386,7 @@ HRESULT CThreadCombine::ProcessVirt()
+       UInt32 processedSize;
+       if (!inFile.Read(buffer, kBufSize, processedSize))
+       {
+-        const HRESULT res = GetLastError_noZero_HRESULT();
++        const HRESULT res = Get7zLastError_noZero_HRESULT();
+         AddErrorPath(nextName);
+         return res;
+       }
+@@ -395,7 +395,7 @@ HRESULT CThreadCombine::ProcessVirt()
+       const UInt32 needSize = processedSize;
+       if (!outFile.Write(buffer, needSize, processedSize))
+       {
+-        const HRESULT res = GetLastError_noZero_HRESULT();
++        const HRESULT res = Get7zLastError_noZero_HRESULT();
+         AddErrorPath(OutputPath);
+         return res;
+       }
+@@ -510,7 +510,7 @@ void CApp::Combine()
+   NName::NormalizeDirPathPrefix(path);
+   if (!CreateComplexDir(us2fs(path)))
+   {
+-    const HRESULT lastError = GetLastError_noZero_HRESULT();
++    const HRESULT lastError = Get7zLastError_noZero_HRESULT();
+     srcPanel.MessageBox_Error_2Lines_Message_HRESULT(MyFormatNew(IDS_CANNOT_CREATE_FOLDER, path), lastError);
+     return;
+   }
+diff --git a/CPP/7zip/UI/FileManager/PluginLoader.h b/CPP/7zip/UI/FileManager/PluginLoader.h
+index 476a7b7..9588944 100644
+--- a/CPP/7zip/UI/FileManager/PluginLoader.h
++++ b/CPP/7zip/UI/FileManager/PluginLoader.h
+@@ -19,13 +19,13 @@ public:
+     Func_CreateObject, Get_HMODULE(),
+         "CreateObject");
+     if (!createObject)
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     return createObject(&clsID, &IID_IFolderManager, (void **)manager);
+   }
+   HRESULT LoadAndCreateManager(CFSTR filePath, REFGUID clsID, IFolderManager **manager)
+   {
+     if (!Load(filePath))
+-      return GetLastError_noZero_HRESULT();
++      return Get7zLastError_noZero_HRESULT();
+     return CreateManager(clsID, manager);
+   }
+ };
+diff --git a/CPP/7zip/UI/FileManager/SysIconUtils.cpp b/CPP/7zip/UI/FileManager/SysIconUtils.cpp
+index 72fe5e7..5115815 100644
+--- a/CPP/7zip/UI/FileManager/SysIconUtils.cpp
++++ b/CPP/7zip/UI/FileManager/SysIconUtils.cpp
+@@ -140,7 +140,7 @@ HRESULT Shell_GetFileInfo_SysIconIndex_for_Path_return_HRESULT(
+     *iconIndex = iconIndexTemp;
+     return S_OK;
+   }
+-  return GetLastError_noZero_HRESULT();
++  return Get7zLastError_noZero_HRESULT();
+ }
+ 
+ /*
+diff --git a/CPP/7zip/UI/FileManager/VerCtrl.cpp b/CPP/7zip/UI/FileManager/VerCtrl.cpp
+index c1ca643..a1cc164 100644
+--- a/CPP/7zip/UI/FileManager/VerCtrl.cpp
++++ b/CPP/7zip/UI/FileManager/VerCtrl.cpp
+@@ -50,7 +50,7 @@ bool CFileDataInfo::Read(const FString &path)
+   const size_t size2 = (size_t)size;
+   if (size2 != size || size2 > (1 << 28))
+   {
+-    SetLastError(1);
++    Set7zLastError(1);
+     return false;
+   }
+ 
+@@ -61,7 +61,7 @@ bool CFileDataInfo::Read(const FString &path)
+     return false;
+   if (processedSize != size2)
+   {
+-    SetLastError(1);
++    Set7zLastError(1);
+     return false;
+   }
+   IsOpen = true;
+@@ -343,7 +343,7 @@ void CApp::VerCtrl(unsigned id)
+           {
+             panel.MessageBox_LastError();
+             return;
+-            // if (::GetLastError() != ERROR_SUCCESS)
++            // if (::Get7zLastError() != ERROR_SUCCESS)
+             // throw "open error";
+           }
+           else
+diff --git a/CPP/7zip/UI/GUI/ExtractGUI.cpp b/CPP/7zip/UI/GUI/ExtractGUI.cpp
+index bafff2b..3348aaf 100644
+--- a/CPP/7zip/UI/GUI/ExtractGUI.cpp
++++ b/CPP/7zip/UI/GUI/ExtractGUI.cpp
+@@ -257,7 +257,7 @@ HRESULT ExtractGUI(
+     /*
+     if (!CreateComplexDirectory(options.OutputDir))
+     {
+-      UString s = GetUnicodeString(NError::MyFormatMessage(GetLastError()));
++      UString s = GetUnicodeString(NError::MyFormatMessage(Get7zLastError()));
+       UString s2 = MyFormatNew(IDS_CANNOT_CREATE_FOLDER,
+       #ifdef Z7_LANG
+       0x02000603,
+diff --git a/CPP/Build.mak b/CPP/Build.mak
+index 86cc2af..f49cffb 100644
+--- a/CPP/Build.mak
++++ b/CPP/Build.mak
+@@ -74,7 +74,7 @@ CFLAGS = $(CFLAGS) -nologo -c -Fo$O/ $(CFLAGS_WARN_LEVEL) -WX -EHsc -Gy -GR- -GF
+ !IF "$(CC)" == "clang-cl"
+ 
+ CFLAGS = $(CFLAGS) \
+-  -Werror \
++   \
+   -Wall \
+   -Wextra \
+   -Weverything \
+diff --git a/CPP/Common/ListFileUtils.cpp b/CPP/Common/ListFileUtils.cpp
+index 714b275..684a875 100644
+--- a/CPP/Common/ListFileUtils.cpp
++++ b/CPP/Common/ListFileUtils.cpp
+@@ -12,7 +12,7 @@
+ #include "../Windows/FileIO.h"
+ 
+ #define CSysInFile NWindows::NFile::NIO::CInFile
+-#define MY_GET_LAST_ERROR ::GetLastError()
++#define MY_GET_LAST_ERROR ::Get7zLastError()
+ 
+ 
+ #define kQuoteChar '\"'
+diff --git a/CPP/Common/MyString.cpp b/CPP/Common/MyString.cpp
+index 10e2331..fba9712 100644
+--- a/CPP/Common/MyString.cpp
++++ b/CPP/Common/MyString.cpp
+@@ -121,7 +121,7 @@ void MyStringLower_Ascii(wchar_t *s) throw()
+ wchar_t MyCharUpper_WIN(wchar_t c) throw()
+ {
+   wchar_t *res = CharUpperW((LPWSTR)(UINT_PTR)(unsigned)c);
+-  if (res != 0 || ::GetLastError() != ERROR_CALL_NOT_IMPLEMENTED)
++  if (res != 0 || ::Get7zLastError() != ERROR_CALL_NOT_IMPLEMENTED)
+     return (wchar_t)(unsigned)(UINT_PTR)res;
+   const int kBufSize = 4;
+   char s[kBufSize + 1];
+@@ -138,7 +138,7 @@ wchar_t MyCharUpper_WIN(wchar_t c) throw()
+ wchar_t MyCharLower_WIN(wchar_t c)
+ {
+   wchar_t *res = CharLowerW((LPWSTR)(UINT_PTR)(unsigned)c);
+-  if (res != 0 || ::GetLastError() != ERROR_CALL_NOT_IMPLEMENTED)
++  if (res != 0 || ::Get7zLastError() != ERROR_CALL_NOT_IMPLEMENTED)
+     return (wchar_t)(unsigned)(UINT_PTR)res;
+   const int kBufSize = 4;
+   char s[kBufSize + 1];
+@@ -158,7 +158,7 @@ wchar_t * MyStringUpper(wchar_t *s)
+   if (s == 0)
+     return 0;
+   wchar_t *res = CharUpperW(s);
+-  if (res != 0 || ::GetLastError() != ERROR_CALL_NOT_IMPLEMENTED)
++  if (res != 0 || ::Get7zLastError() != ERROR_CALL_NOT_IMPLEMENTED)
+     return res;
+   AString a = UnicodeStringToMultiByte(s);
+   a.MakeUpper();
+@@ -173,7 +173,7 @@ wchar_t * MyStringLower(wchar_t *s)
+   if (s == 0)
+     return 0;
+   wchar_t *res = CharLowerW(s);
+-  if (res != 0 || ::GetLastError() != ERROR_CALL_NOT_IMPLEMENTED)
++  if (res != 0 || ::Get7zLastError() != ERROR_CALL_NOT_IMPLEMENTED)
+     return res;
+   AString a = UnicodeStringToMultiByte(s);
+   a.MakeLower();
+diff --git a/CPP/Common/MyWindows.cpp b/CPP/Common/MyWindows.cpp
+index a1dfbef..b72271f 100644
+--- a/CPP/Common/MyWindows.cpp
++++ b/CPP/Common/MyWindows.cpp
+@@ -141,12 +141,12 @@ LONG CompareFileTime(const FILETIME* ft1, const FILETIME* ft2)
+   return 0;
+ }
+ 
+-DWORD GetLastError()
++DWORD Get7zLastError()
+ {
+   return (DWORD)errno;
+ }
+ 
+-void SetLastError(DWORD dw)
++void Set7zLastError(DWORD dw)
+ {
+   errno = (int)dw;
+ }
+diff --git a/CPP/Common/MyWindows.h b/CPP/Common/MyWindows.h
+index da5370b..4aeec86 100644
+--- a/CPP/Common/MyWindows.h
++++ b/CPP/Common/MyWindows.h
+@@ -270,8 +270,8 @@ EXTERN_C void SysFreeString(BSTR bstr);
+ EXTERN_C UINT SysStringByteLen(BSTR bstr);
+ EXTERN_C UINT SysStringLen(BSTR bstr);
+ 
+-EXTERN_C DWORD GetLastError();
+-EXTERN_C void SetLastError(DWORD dwCode);
++EXTERN_C DWORD Get7zLastError();
++EXTERN_C void Set7zLastError(DWORD dwCode);
+ EXTERN_C LONG CompareFileTime(const FILETIME* ft1, const FILETIME* ft2);
+ 
+ EXTERN_C DWORD GetCurrentThreadId();
+diff --git a/CPP/Common/StringConvert.cpp b/CPP/Common/StringConvert.cpp
+index 79ff9e0..851682b 100644
+--- a/CPP/Common/StringConvert.cpp
++++ b/CPP/Common/StringConvert.cpp
+@@ -42,7 +42,7 @@ MultiByteToWideChar(CodePage, DWORD dwFlags,
+       - Return: 0. ERR: ERROR_NO_UNICODE_TRANSLATION.
+     
+     if MB_ERR_INVALID_CHARS is NOT set in dwFlags:
+-      before Vista: illegal character is dropped (skipped). WinXP-64: GetLastError() returns 0.
++      before Vista: illegal character is dropped (skipped). WinXP-64: Get7zLastError() returns 0.
+       in Vista+:    illegal character is not dropped (MSDN). Undocumented: illegal
+                     character is converted to U+FFFD, which is REPLACEMENT CHARACTER.
+ */
+@@ -83,7 +83,7 @@ void MultiByteToUnicodeString2(UString &dest, const AString &src, UINT codePage)
+     unsigned len = (unsigned)MultiByteToWideChar(codePage, 0, src, (int)src.Len(), NULL, 0);
+     if (len == 0)
+     {
+-      if (GetLastError() != 0)
++      if (Get7zLastError() != 0)
+         throw 282228;
+     }
+     else
+@@ -187,7 +187,7 @@ static void UnicodeStringToMultiByte2(AString &dest, const UString &src, UINT co
+     unsigned len = (unsigned)WideCharToMultiByte(codePage, 0, src, (int)src.Len(), NULL, 0, NULL, NULL);
+     if (len == 0)
+     {
+-      if (GetLastError() != 0)
++      if (Get7zLastError() != 0)
+         throw 282228;
+     }
+     else
+diff --git a/CPP/Windows/FileDir.cpp b/CPP/Windows/FileDir.cpp
+index ad0d8c9..88cb14a 100644
+--- a/CPP/Windows/FileDir.cpp
++++ b/CPP/Windows/FileDir.cpp
+@@ -129,7 +129,7 @@ static bool SetFileTime_Base(CFSTR path, const CFiTime *cTime, const CFiTime *aT
+   #ifndef _UNICODE
+   if (!g_IsNT)
+   {
+-    ::SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
++    ::Set7zLastError(ERROR_CALL_NOT_IMPLEMENTED);
+     return false;
+   }
+   #endif
+@@ -295,7 +295,7 @@ bool MyMoveFile_with_Progress(CFSTR oldFile, CFSTR newFile,
+       if (::MoveFileWithProgressW(fs2us(oldFile), fs2us(newFile),
+           CopyProgressRoutine_to_ICopyFileProgress, progress, MOVEFILE_COPY_ALLOWED))
+         return true;
+-      if (::GetLastError() == ERROR_REQUEST_ABORTED)
++      if (::Get7zLastError() == ERROR_REQUEST_ABORTED)
+         return false;
+     }
+     #ifdef Z7_LONG_PATH
+@@ -336,7 +336,7 @@ bool MyCreateHardLink(CFSTR newFileName, CFSTR existFileName)
+   #ifndef _UNICODE
+   if (!g_IsNT)
+   {
+-    SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
++    Set7zLastError(ERROR_CALL_NOT_IMPLEMENTED);
+     return false;
+     /*
+     if (::CreateHardLink(fs2fas(newFileName), fs2fas(existFileName), NULL))
+@@ -414,7 +414,7 @@ bool CreateDir(CFSTR path)
+       if (::CreateDirectoryW(fs2us(path), NULL))
+         return true;
+     #ifdef Z7_LONG_PATH
+-    if ((!USE_MAIN_PATH || ::GetLastError() != ERROR_ALREADY_EXISTS) && USE_SUPER_PATH)
++    if ((!USE_MAIN_PATH || ::Get7zLastError() != ERROR_ALREADY_EXISTS) && USE_SUPER_PATH)
+     {
+       UString superPath;
+       if (GetSuperPath(path, superPath, USE_MAIN_PATH))
+@@ -449,14 +449,14 @@ static bool CreateDir2(CFSTR path)
+       if (::CreateDirectoryW(fs2us(path), NULL))
+         return true;
+     #ifdef Z7_LONG_PATH
+-    if ((!USE_MAIN_PATH || ::GetLastError() != ERROR_ALREADY_EXISTS) && USE_SUPER_PATH)
++    if ((!USE_MAIN_PATH || ::Get7zLastError() != ERROR_ALREADY_EXISTS) && USE_SUPER_PATH)
+     {
+       UString superPath;
+       if (GetSuperPath(path, superPath, USE_MAIN_PATH))
+       {
+         if (::CreateDirectoryW(superPath, NULL))
+           return true;
+-        if (::GetLastError() != ERROR_ALREADY_EXISTS)
++        if (::Get7zLastError() != ERROR_ALREADY_EXISTS)
+           return false;
+         NFind::CFileInfo fi;
+         if (!fi.Find(us2fs(superPath)))
+@@ -466,7 +466,7 @@ static bool CreateDir2(CFSTR path)
+     }
+     #endif
+   }
+-  if (::GetLastError() != ERROR_ALREADY_EXISTS)
++  if (::Get7zLastError() != ERROR_ALREADY_EXISTS)
+     return false;
+   NFind::CFileInfo fi;
+   if (!fi.Find(path))
+@@ -526,7 +526,7 @@ bool CreateComplexDir(CFSTR _path)
+   {
+     if (CreateDir2(path))
+       break;
+-    if (::GetLastError() == ERROR_ALREADY_EXISTS)
++    if (::Get7zLastError() == ERROR_ALREADY_EXISTS)
+       return false;
+     pos = path.ReverseFind_PathSepar();
+     if (pos < 0 || pos == 0)
+@@ -612,7 +612,7 @@ bool RemoveDirWithSubItems(const FString &path)
+       return false;
+     if (!fi.IsDir())
+     {
+-      ::SetLastError(ERROR_DIRECTORY);
++      ::Set7zLastError(ERROR_DIRECTORY);
+       return false;
+     }
+     if (fi.HasReparsePoint())
+@@ -637,19 +637,19 @@ bool RemoveDirWithSubItems(const FString &path)
+       {
+         if (!RemoveDirWithSubItems(s))
+         {
+-          lastError = GetLastError();
++          lastError = Get7zLastError();
+           isError = true;
+         }
+       }
+       else if (!DeleteFileAlways(s))
+       {
+-        lastError = GetLastError();
++        lastError = Get7zLastError();
+         isError = false;
+       }
+     }
+     if (isError)
+     {
+-      SetLastError(lastError);
++      Set7zLastError(lastError);
+       return false;
+     }
+   }
+@@ -679,7 +679,7 @@ bool RemoveDirAlways_if_Empty(const FString &path)
+         // we don't want to change attributes, if there are files
+         // in directory, because RemoveDir(path) will fail.
+         need_ClearAttrib = false;
+-        // SetLastError(ERROR_DIR_NOT_EMPTY);
++        // Set7zLastError(ERROR_DIR_NOT_EMPTY);
+         // return false;
+       }
+     }
+@@ -789,7 +789,7 @@ bool GetCurrentDir(FString &path)
+       /* it's unexpected case, if current dir of process
+          was changed between two function calls,
+          or some unexpected function implementation */
+-      // SetLastError((DWORD)E_FAIL);  // we can set some error code
++      // Set7zLastError((DWORD)E_FAIL);  // we can set some error code
+       return false;
+     }
+     path = us2fs(temp);
+@@ -910,7 +910,7 @@ bool CreateTempFile2(CFSTR prefix, bool addRandom, AString &postfix, NIO::COutFi
+     path += postfix;
+     if (NFind::DoesFileOrDirExist(path))
+     {
+-      SetLastError(ERROR_ALREADY_EXISTS);
++      Set7zLastError(ERROR_ALREADY_EXISTS);
+       continue;
+     }
+     if (outFile)
+@@ -923,7 +923,7 @@ bool CreateTempFile2(CFSTR prefix, bool addRandom, AString &postfix, NIO::COutFi
+       if (CreateDir(path))
+         return true;
+     }
+-    const DWORD error = GetLastError();
++    const DWORD error = Get7zLastError();
+     if (error != ERROR_FILE_EXISTS &&
+         error != ERROR_ALREADY_EXISTS)
+       break;
+@@ -1315,7 +1315,7 @@ bool SetFileAttrib_PosixHighDetect(CFSTR path, DWORD attrib)
+     /* for most systems: permissions for symlinks are fixed to rwxrwxrwx.
+        so we don't need chmod() for symlinks. */
+     return true;
+-    // SetLastError(ENOSYS);
++    // Set7zLastError(ENOSYS);
+     // return false;
+   }
+   else
+diff --git a/CPP/Windows/FileFind.cpp b/CPP/Windows/FileFind.cpp
+index 669541e..dd29be5 100644
+--- a/CPP/Windows/FileFind.cpp
++++ b/CPP/Windows/FileFind.cpp
+@@ -122,12 +122,12 @@ bool CFileInfoBase::SetAs_StdInFile()
+   /* in GUI mode : GetStdHandle(STD_INPUT_HANDLE) returns NULL,
+      and it doesn't set LastError.  */
+ #if 1
+-  SetLastError(0);
++  Set7zLastError(0);
+   const HANDLE h = GetStdHandle(STD_INPUT_HANDLE);
+   if (!h || h == INVALID_HANDLE_VALUE)
+   {
+-    if (GetLastError() == 0)
+-      SetLastError(ERROR_INVALID_HANDLE);
++    if (Get7zLastError() == 0)
++      Set7zLastError(ERROR_INVALID_HANDLE);
+     return false;
+   }
+   BY_HANDLE_FILE_INFORMATION info;
+@@ -424,18 +424,18 @@ bool CFindStream::FindFirst(CFSTR path, CStreamInfo &si)
+ #ifdef Z7_USE_DYN_FindFirstStream
+   if (!g_FindFirstStreamW)
+   {
+-    ::SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
++    ::Set7zLastError(ERROR_CALL_NOT_IMPLEMENTED);
+     return false;
+   }
+ #endif
+   {
+     MY_WIN32_FIND_STREAM_DATA sd;
+-    SetLastError(0);
++    Set7zLastError(0);
+     IF_USE_MAIN_PATH
+       _handle = MY_FindFirstStreamW(fs2us(path), My_FindStreamInfoStandard, &sd, 0);
+     if (_handle == INVALID_HANDLE_VALUE)
+     {
+-      if (::GetLastError() == ERROR_HANDLE_EOF)
++      if (::Get7zLastError() == ERROR_HANDLE_EOF)
+         return false;
+       // long name can be tricky for path like ".\dirName".
+       #ifdef Z7_LONG_PATH
+@@ -459,7 +459,7 @@ bool CFindStream::FindNext(CStreamInfo &si)
+ #ifdef Z7_USE_DYN_FindFirstStream
+   if (!g_FindNextStreamW)
+   {
+-    ::SetLastError(ERROR_CALL_NOT_IMPLEMENTED);
++    ::Set7zLastError(ERROR_CALL_NOT_IMPLEMENTED);
+     return false;
+   }
+ #endif
+@@ -485,7 +485,7 @@ bool CStreamEnumerator::Next(CStreamInfo &si, bool &found)
+     return true;
+   }
+   found = false;
+-  return (::GetLastError() == ERROR_HANDLE_EOF);
++  return (::Get7zLastError() == ERROR_HANDLE_EOF);
+ }
+ 
+ #endif
+@@ -493,7 +493,7 @@ bool CStreamEnumerator::Next(CStreamInfo &si, bool &found)
+ 
+ /*
+ WinXP-64 GetFileAttributes():
+-  If the function fails, it returns INVALID_FILE_ATTRIBUTES and use GetLastError() to get error code
++  If the function fails, it returns INVALID_FILE_ATTRIBUTES and use Get7zLastError() to get error code
+ 
+   \    - OK
+   C:\  - OK, if there is such drive,
+@@ -505,7 +505,7 @@ WinXP-64 GetFileAttributes():
+ 
+   \\Server\BadShare  - ERROR_BAD_NETPATH
+   \\Server\Share     - WORKS OK, but MSDN says:
+-                          GetFileAttributes for a network share, the function fails, and GetLastError
++                          GetFileAttributes for a network share, the function fails, and Get7zLastError
+                           returns ERROR_BAD_NETPATH. You must specify a path to a subfolder on that share.
+ */
+ 
+@@ -647,7 +647,7 @@ bool CFileInfo::Find(CFSTR path, bool followLink)
+           return false;
+         if (!found)
+         {
+-          ::SetLastError(ERROR_FILE_NOT_FOUND);
++          ::Set7zLastError(ERROR_FILE_NOT_FOUND);
+           return false;
+         }
+         if (si.Name.IsEqualTo_NoCase(streamName))
+@@ -671,7 +671,7 @@ bool CFileInfo::Find(CFSTR path, bool followLink)
+   #if defined(_WIN32) && !defined(UNDER_CE)
+   {
+     /*
+-    DWORD lastError = GetLastError();
++    DWORD lastError = Get7zLastError();
+     if (lastError == ERROR_FILE_NOT_FOUND
+         || lastError == ERROR_BAD_NETPATH  // XP64: "\\Server\Share"
+         || lastError == ERROR_BAD_NET_NAME // Win7: "\\Server\Share"
+@@ -753,7 +753,7 @@ bool CFileInfo::Find(CFSTR path, bool followLink)
+                 return true;
+               }
+             }
+-            // ::SetLastError(lastError);
++            // ::Set7zLastError(lastError);
+           }
+         }
+       }
+@@ -919,7 +919,7 @@ bool CEnumerator::Next(CFileInfo &fi, bool &found)
+   }
+ 
+   found = false;
+-  DWORD lastError = ::GetLastError();
++  DWORD lastError = ::Get7zLastError();
+   if (_findFile.IsHandleAllocated())
+     return (lastError == ERROR_NO_MORE_FILES);
+   // we support the case for empty root folder: FindFirstFile("c:\\*") returns ERROR_FILE_NOT_FOUND
+diff --git a/CPP/Windows/FileIO.cpp b/CPP/Windows/FileIO.cpp
+index dc4de14..7c4b45d 100644
+--- a/CPP/Windows/FileIO.cpp
++++ b/CPP/Windows/FileIO.cpp
+@@ -19,9 +19,9 @@
+ #include "FileIO.h"
+ #include "FileName.h"
+ 
+-HRESULT GetLastError_noZero_HRESULT()
++HRESULT Get7zLastError_noZero_HRESULT()
+ {
+-  const DWORD res = ::GetLastError();
++  const DWORD res = ::Get7zLastError();
+   if (res == 0)
+     return E_FAIL;
+   return HRESULT_FROM_WIN32(res);
+@@ -105,7 +105,7 @@ bool CFileBase::Create(CFSTR path, DWORD desiredAccess,
+   if (_handle == INVALID_HANDLE_VALUE)
+   {
+     // it's debug hack to open symbolic links in Windows XP and WSL links in Windows 10
+-    DWORD lastError = GetLastError();
++    DWORD lastError = Get7zLastError();
+     if (lastError == ERROR_CANT_ACCESS_FILE)
+     {
+       CByteBuffer buf;
+@@ -127,7 +127,7 @@ bool CFileBase::Create(CFSTR path, DWORD desiredAccess,
+           }
+         }
+       }
+-      SetLastError(lastError);
++      Set7zLastError(lastError);
+     }
+   }
+   #endif
+@@ -169,7 +169,7 @@ bool CFileBase::GetLength(UInt64 &length) const throw()
+   DWORD high = 0;
+   const DWORD low = ::GetFileSize(_handle, &high);
+   if (low == INVALID_FILE_SIZE)
+-    if (::GetLastError() != NO_ERROR)
++    if (::Get7zLastError() != NO_ERROR)
+       return false;
+   length = (((UInt64)high) << 32) + low;
+   return true;
+@@ -191,7 +191,7 @@ bool CFileBase::GetLength(UInt64 &length) const throw()
+    {
+      the function fails,
+      the file pointer is not moved,
+-     the code returned by GetLastError() is ERROR_NEGATIVE_SEEK.
++     the code returned by Get7zLastError() is ERROR_NEGATIVE_SEEK.
+    }
+ 
+    If the hFile handle is opened with the FILE_FLAG_NO_BUFFERING flag set
+@@ -206,14 +206,14 @@ bool CFileBase::GetLength(UInt64 &length) const throw()
+    The size of the file does not increase until you call the SetEndOfFile, WriteFile, or WriteFileEx function.
+ 
+    If the return value is INVALID_SET_FILE_POINTER and if lpDistanceToMoveHigh is non-NULL,
+-   an application must call GetLastError to determine whether or not the function has succeeded or failed.
++   an application must call Get7zLastError to determine whether or not the function has succeeded or failed.
+ */
+ 
+ bool CFileBase::GetPosition(UInt64 &position) const throw()
+ {
+   LONG high = 0;
+   const DWORD low = ::SetFilePointer(_handle, 0, &high, FILE_CURRENT);
+-  if (low == INVALID_SET_FILE_POINTER && GetLastError() != NO_ERROR)
++  if (low == INVALID_SET_FILE_POINTER && Get7zLastError() != NO_ERROR)
+   {
+     // for error case we can set (position)  to (-1) or (0) or leave (position) unchanged.
+     // position = (UInt64)(Int64)-1; // for debug
+@@ -240,12 +240,12 @@ bool CFileBase::Seek(Int64 distanceToMove, DWORD moveMethod, UInt64 &newPosition
+   const DWORD low = ::SetFilePointer(_handle, (LONG)(distanceToMove & 0xFFFFFFFF), &high, moveMethod);
+   if (low == INVALID_SET_FILE_POINTER)
+   {
+-    const DWORD lastError = ::GetLastError();
++    const DWORD lastError = ::Get7zLastError();
+     if (lastError != NO_ERROR)
+     {
+       // 21.07: we set (newPosition) to real position even after error.
+       GetPosition(newPosition);
+-      SetLastError(lastError); // restore LastError
++      Set7zLastError(lastError); // restore LastError
+       return false;
+     }
+   }
+@@ -610,11 +610,11 @@ bool COutFile::SetLength_KeepPosition(UInt64 length) throw()
+   DWORD lastError = 0;
+   const bool result = SetLength(length);
+   if (!result)
+-    lastError = GetLastError();
++    lastError = Get7zLastError();
+   UInt64 currentPos2;
+   const bool result2 = Seek(currentPos, currentPos2);
+   if (lastError != 0)
+-    SetLastError(lastError);
++    Set7zLastError(lastError);
+   return (result && result2);
+ }
+ 
+@@ -858,7 +858,7 @@ bool COutFile::Open_Disposition(const char *name, DWORD creationDisposition)
+     case OPEN_EXISTING:     flag = O_WRONLY;  break;
+     case TRUNCATE_EXISTING: flag = O_WRONLY | O_TRUNC; break;
+     default:
+-      SetLastError(EINVAL);
++      Set7zLastError(EINVAL);
+       return false;
+   }
+   return OpenBinary_forWrite_oflag(name, flag);
+@@ -895,7 +895,7 @@ bool COutFile::SetLength(UInt64 length) throw()
+   const off_t len2 = (off_t)length;
+   if ((Int64)length != len2)
+   {
+-    SetLastError(EFBIG);
++    Set7zLastError(EFBIG);
+     return false;
+   }
+   // The value of the seek pointer shall not be modified by a call to ftruncate().
+diff --git a/CPP/Windows/FileIO.h b/CPP/Windows/FileIO.h
+index 26edef4..5fbe247 100644
+--- a/CPP/Windows/FileIO.h
++++ b/CPP/Windows/FileIO.h
+@@ -33,7 +33,7 @@
+ 
+ #include "Defs.h"
+ 
+-HRESULT GetLastError_noZero_HRESULT();
++HRESULT Get7zLastError_noZero_HRESULT();
+ 
+ #define my_FSCTL_SET_REPARSE_POINT     CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 41, METHOD_BUFFERED, FILE_SPECIAL_ACCESS) // REPARSE_DATA_BUFFER
+ #define my_FSCTL_GET_REPARSE_POINT     CTL_CODE(FILE_DEVICE_FILE_SYSTEM, 42, METHOD_BUFFERED, FILE_ANY_ACCESS)     // REPARSE_DATA_BUFFER
+diff --git a/CPP/Windows/FileLink.cpp b/CPP/Windows/FileLink.cpp
+index 2883c82..8af91d1 100644
+--- a/CPP/Windows/FileLink.cpp
++++ b/CPP/Windows/FileLink.cpp
+@@ -577,7 +577,7 @@ bool SetReparseData(CFSTR path, bool isDir, const void *data, DWORD size)
+   {
+     if (fi.IsDir() != isDir)
+     {
+-      ::SetLastError(ERROR_DIRECTORY);
++      ::Set7zLastError(ERROR_DIRECTORY);
+       return false;
+     }
+   }
+@@ -612,7 +612,7 @@ bool DeleteReparseData(CFSTR path)
+   #define my_REPARSE_DATA_BUFFER_HEADER_SIZE 8
+   if (reparseData.Size() < my_REPARSE_DATA_BUFFER_HEADER_SIZE)
+   {
+-    SetLastError(ERROR_INVALID_REPARSE_DATA);
++    Set7zLastError(ERROR_INVALID_REPARSE_DATA);
+     return false;
+   }
+   // BYTE buf[my_REPARSE_DATA_BUFFER_HEADER_SIZE];
+@@ -647,7 +647,7 @@ bool GetReparseData(CFSTR path, CByteBuffer &reparseData)
+     return false;
+   if ((size_t)size >= request)
+   {
+-    SetLastError(EINVAL); // check it: ENAMETOOLONG
++    Set7zLastError(EINVAL); // check it: ENAMETOOLONG
+     return false;
+   }
+ 
+@@ -668,7 +668,7 @@ bool SetReparseData(CFSTR path, bool isDir, const void *data, DWORD size)
+   UNUSED_VAR(isDir)
+   UNUSED_VAR(data)
+   UNUSED_VAR(size)
+-  SetLastError(ENOSYS);
++  Set7zLastError(ENOSYS);
+   return false;
+ }
+ */
+diff --git a/CPP/Windows/FileMapping.h b/CPP/Windows/FileMapping.h
+index caa7ea3..39f99c0 100644
+--- a/CPP/Windows/FileMapping.h
++++ b/CPP/Windows/FileMapping.h
+@@ -15,7 +15,7 @@ public:
+   WRes Create(DWORD protect, UInt64 maxSize, LPCTSTR name)
+   {
+     _handle = ::CreateFileMapping(INVALID_HANDLE_VALUE, NULL, protect, (DWORD)(maxSize >> 32), (DWORD)maxSize, name);
+-    return ::GetLastError();
++    return ::Get7zLastError();
+   }
+ 
+   WRes Open(DWORD
+@@ -36,7 +36,7 @@ public:
+     _handle = ::OpenFileMapping(desiredAccess, FALSE, name);
+     if (_handle != NULL)
+       return 0;
+-    return ::GetLastError();
++    return ::Get7zLastError();
+     #endif
+   }
+ 
+diff --git a/CPP/Windows/MemoryLock.cpp b/CPP/Windows/MemoryLock.cpp
+index bc2d7c7..386377e 100644
+--- a/CPP/Windows/MemoryLock.cpp
++++ b/CPP/Windows/MemoryLock.cpp
+@@ -65,7 +65,7 @@ Z7_DIAGNOSTIC_IGNORE_CAST_FUNCTION
+         tp.PrivilegeCount = 1;
+         tp.Privileges[0].Attributes = (enable ? SE_PRIVILEGE_ENABLED : 0);
+         if (MY_FUNC_SELECT(AdjustTokenPrivileges)(token, FALSE, &tp, 0, NULL, NULL))
+-          res = (GetLastError() == ERROR_SUCCESS);
++          res = (Get7zLastError() == ERROR_SUCCESS);
+       }
+       ::CloseHandle(token);
+     }
+diff --git a/CPP/Windows/ProcessUtils.cpp b/CPP/Windows/ProcessUtils.cpp
+index f5e156c..eacb9fa 100644
+--- a/CPP/Windows/ProcessUtils.cpp
++++ b/CPP/Windows/ProcessUtils.cpp
+@@ -87,7 +87,7 @@ WRes CProcess::Create(LPCWSTR imageName, const UString &params, LPCWSTR curDir)
+         NULL, NULL, FALSE, 0, NULL, curDir, &si, &pi);
+   }
+   if (result == 0)
+-    return ::GetLastError();
++    return ::Get7zLastError();
+   ::CloseHandle(pi.hThread);
+   _handle = pi.hProcess;
+   return 0;
+diff --git a/CPP/Windows/SecurityUtils.cpp b/CPP/Windows/SecurityUtils.cpp
+index d4282d0..fa7fb0d 100644
+--- a/CPP/Windows/SecurityUtils.cpp
++++ b/CPP/Windows/SecurityUtils.cpp
+@@ -17,7 +17,7 @@ bool MyLookupAccountSid(LPCTSTR systemName, PSID sid,
+       accountName.GetBuf(0), &accountNameSize,
+       domainName.GetBuf(0), &domainNameSize, sidNameUse))
+   {
+-    if (::GetLastError() != ERROR_INSUFFICIENT_BUFFER)
++    if (::Get7zLastError() != ERROR_INSUFFICIENT_BUFFER)
+       return false;
+   }
+   DWORD accountNameSize2 = accountNameSize, domainNameSize2 = domainNameSize;
+@@ -90,7 +90,7 @@ static PSID GetSid(LPWSTR accountName)
+     #endif
+         (NULL, accountName, NULL, &sidLen, NULL, &domainLen, &sidNameUse))
+   {
+-    if (::GetLastError() == ERROR_INSUFFICIENT_BUFFER)
++    if (::Get7zLastError() == ERROR_INSUFFICIENT_BUFFER)
+     {
+       const PSID pSid = ::HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, sidLen);
+       LPWSTR domainName = (LPWSTR)::HeapAlloc(GetProcessHeap(), HEAP_ZERO_MEMORY, (domainLen + 1) * sizeof(WCHAR));
+diff --git a/CPP/Windows/Synchronization.cpp b/CPP/Windows/Synchronization.cpp
+index d5542af..56a379d 100644
+--- a/CPP/Windows/Synchronization.cpp
++++ b/CPP/Windows/Synchronization.cpp
+@@ -48,7 +48,7 @@ DWORD WINAPI WaitForMultiObj_Any_Infinite(DWORD count, const CHandle_WFMO *handl
+   if (count < 1)
+   {
+     // abort();
+-    SetLastError(EINVAL);
++    Set7zLastError(EINVAL);
+     return WAIT_FAILED;
+   }
+ 
+@@ -62,7 +62,7 @@ DWORD WINAPI WaitForMultiObj_Any_Infinite(DWORD count, const CHandle_WFMO *handl
+     {
+       // abort();
+       synchro->Leave();
+-      SetLastError(EINVAL);
++      Set7zLastError(EINVAL);
+       return WAIT_FAILED;
+     }
+   }
+diff --git a/CPP/Windows/Synchronization.h b/CPP/Windows/Synchronization.h
+index 1df84d3..eafd449 100644
+--- a/CPP/Windows/Synchronization.h
++++ b/CPP/Windows/Synchronization.h
+@@ -34,14 +34,14 @@ public:
+     _object = ::CreateEvent(sa, BoolToBOOL(manualReset), BoolToBOOL(initiallyOwn), name);
+     if (name == NULL && _object != NULL)
+       return 0;
+-    return ::GetLastError();
++    return ::Get7zLastError();
+   }
+   WRes Open(DWORD desiredAccess, bool inheritHandle, LPCTSTR name)
+   {
+     _object = ::OpenEvent(desiredAccess, BoolToBOOL(inheritHandle), name);
+     if (_object != NULL)
+       return 0;
+-    return ::GetLastError();
++    return ::Get7zLastError();
+   }
+   #endif
+ 
+@@ -95,7 +95,7 @@ class CObject: public CHandle
+ {
+ public:
+   WRes Lock(DWORD timeoutInterval = INFINITE)
+-    { return (::WaitForSingleObject(_handle, timeoutInterval) == WAIT_OBJECT_0 ? 0 : ::GetLastError()); }
++    { return (::WaitForSingleObject(_handle, timeoutInterval) == WAIT_OBJECT_0 ? 0 : ::Get7zLastError()); }
+ };
+ 
+ class CMutex: public CObject
+@@ -106,7 +106,7 @@ public:
+     _handle = ::CreateMutex(sa, BoolToBOOL(initiallyOwn), name);
+     if (name == NULL && _handle != 0)
+       return 0;
+-    return ::GetLastError();
++    return ::Get7zLastError();
+   }
+   #ifndef UNDER_CE
+   WRes Open(DWORD desiredAccess, bool inheritHandle, LPCTSTR name)
+@@ -114,12 +114,12 @@ public:
+     _handle = ::OpenMutex(desiredAccess, BoolToBOOL(inheritHandle), name);
+     if (_handle != 0)
+       return 0;
+-    return ::GetLastError();
++    return ::Get7zLastError();
+   }
+   #endif
+   WRes Release()
+   {
+-    return ::ReleaseMutex(_handle) ? 0 : ::GetLastError();
++    return ::ReleaseMutex(_handle) ? 0 : ::Get7zLastError();
+   }
+ };
+ 
+diff --git a/CPP/Windows/Window.cpp b/CPP/Windows/Window.cpp
+index 102c503..4417139 100644
+--- a/CPP/Windows/Window.cpp
++++ b/CPP/Windows/Window.cpp
+@@ -116,7 +116,7 @@ bool CWindow::GetText(CSysString &s) const
+   s.Empty();
+   unsigned len = (unsigned)GetTextLength();
+   if (len == 0)
+-    return (::GetLastError() == ERROR_SUCCESS);
++    return (::Get7zLastError() == ERROR_SUCCESS);
+   TCHAR *p = s.GetBuf(len);
+   {
+     const unsigned len2 = (unsigned)GetText(p, (int)(len + 1));
+@@ -125,7 +125,7 @@ bool CWindow::GetText(CSysString &s) const
+   }
+   s.ReleaseBuf_CalcLen(len);
+   if (len == 0)
+-    return (::GetLastError() == ERROR_SUCCESS);
++    return (::Get7zLastError() == ERROR_SUCCESS);
+   return true;
+ }
+ 
+@@ -137,7 +137,7 @@ bool CWindow::GetText(UString &s) const
+     s.Empty();
+     unsigned len = (unsigned)GetWindowTextLengthW(_window);
+     if (len == 0)
+-      return (::GetLastError() == ERROR_SUCCESS);
++      return (::Get7zLastError() == ERROR_SUCCESS);
+     wchar_t *p = s.GetBuf(len);
+     {
+       const unsigned len2 = (unsigned)GetWindowTextW(_window, p, (int)(len + 1));
+@@ -146,7 +146,7 @@ bool CWindow::GetText(UString &s) const
+     }
+     s.ReleaseBuf_CalcLen(len);
+     if (len == 0)
+-      return (::GetLastError() == ERROR_SUCCESS);
++      return (::Get7zLastError() == ERROR_SUCCESS);
+     return true;
+   }
+   CSysString sysString;

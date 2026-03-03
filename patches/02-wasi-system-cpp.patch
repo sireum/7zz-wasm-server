@@ -1,0 +1,35 @@
+diff --git a/CPP/Windows/System.cpp b/CPP/Windows/System.cpp
+index 6999ef9..c61ac0b 100644
+--- a/CPP/Windows/System.cpp
++++ b/CPP/Windows/System.cpp
+@@ -5,7 +5,9 @@
+ #ifndef _WIN32
+ #include <unistd.h>
+ #include <limits.h>
+-#if defined(__APPLE__) || defined(__DragonFly__) \
++#if defined(__wasi__)
++// WASI: no sysinfo or sysctl
++#elif defined(__APPLE__) || defined(__DragonFly__) \
+     || defined(BSD) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) \
+     || defined(__QNXNTO__)
+ #include <sys/sysctl.h>
+@@ -300,7 +302,9 @@ bool GetRamSize(size_t &size)
+   size = (size_t)sizeof(size_t) << 29;
+   size64 = size;
+ 
+-#if defined(__APPLE__) || defined(__DragonFly__) \
++#if defined(__wasi__)
++// WASI: no sysinfo or sysctl
++#elif defined(__APPLE__) || defined(__DragonFly__) \
+     || defined(BSD) || defined(__FreeBSD__) || defined(__NetBSD__) || defined(__OpenBSD__) \
+     || defined(__QNXNTO__)
+ 
+@@ -340,7 +344,7 @@ bool GetRamSize(size_t &size)
+     #if defined(_SC_AIX_REALMEM) // AIX
+       size64 = (UInt64)sysconf(_SC_AIX_REALMEM) * 1024;
+     #endif
+-  #elif 0 || defined(__sun)
++  #elif 0 || defined(__sun) || defined(__wasi__)
+     #if defined(_SC_PHYS_PAGES) && defined(_SC_PAGESIZE)
+     // FreeBSD, Linux, OpenBSD, and Solaris.
+     {
