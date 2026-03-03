@@ -27,6 +27,10 @@ jobs:
       - name: Build
         run: |
           bash build.sh
+      - name: Install Scala CLI
+        uses: VirtusLab/scala-cli-setup@v1
+      - name: Test
+        run: scala-cli run test_server.sc
       - name: Upload WASM
         uses: svenstaro/upload-release-action@v2
         with:
@@ -36,12 +40,21 @@ jobs:
           asset_name: 7zz-server-${{ env.P7ZIP_V }}.wasm
           tag: misc
           overwrite: true
-      - name: Upload License
+      - name: Upload 7-Zip License
         uses: svenstaro/upload-release-action@v2
         with:
           repo_name: sireum/rolling
           repo_token: ${{ secrets.RELEASE_TOKEN }}
           file: 7zip/DOC/License.txt
           asset_name: 7zz-server-${{ env.P7ZIP_V }}-license.txt
+          tag: misc
+          overwrite: true
+      - name: Upload Wrapper License
+        uses: svenstaro/upload-release-action@v2
+        with:
+          repo_name: sireum/rolling
+          repo_token: ${{ secrets.RELEASE_TOKEN }}
+          file: license.txt
+          asset_name: 7zz-wasm-server-license.txt
           tag: misc
           overwrite: true
