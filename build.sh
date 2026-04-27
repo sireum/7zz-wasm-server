@@ -4,7 +4,7 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 cd "$SCRIPT_DIR"
 
-P7ZIP_V=26.00
+P7ZIP_V=26.01
 WASI_SDK="${WASI_SDK:-$HOME/wasi-sdk}"
 NPROC=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
 
