@@ -27,6 +27,27 @@ static inline int lchown(const char *path, uid_t owner, gid_t group) {
     (void)path; (void)owner; (void)group; return 0;
 }
 
+/* WASI has no resource limits.  7-zip 26.01 added a startup hook in
+   UI/Console/Main.cpp that bumps RLIMIT_NOFILE; stub getrlimit and
+   setrlimit so the call compiles and silently no-ops at runtime.
+   rlim_t / struct rlimit / RLIMIT_NOFILE come from <sys/resource.h>
+   on POSIX, which WASI does not provide. */
+typedef unsigned long long rlim_t;
+struct rlimit {
+    rlim_t rlim_cur;
+    rlim_t rlim_max;
+};
+#define RLIMIT_NOFILE 7
+#define RLIM_INFINITY (~(rlim_t)0)
+static inline int getrlimit(int resource, struct rlimit *rlim) {
+    (void)resource;
+    if (rlim) { rlim->rlim_cur = RLIM_INFINITY; rlim->rlim_max = RLIM_INFINITY; }
+    return 0;
+}
+static inline int setrlimit(int resource, const struct rlimit *rlim) {
+    (void)resource; (void)rlim; return 0;
+}
+
 #ifdef __cplusplus
 }
 #endif
